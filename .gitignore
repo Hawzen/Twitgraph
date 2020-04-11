@@ -1,0 +1,5 @@
+*\.ipynb_checkpoints
+*\__pycache__
+twitterkeys.txt
+*\.idea
+*\sigma.js-1.2.1
