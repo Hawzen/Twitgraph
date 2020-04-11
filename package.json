@@ -1,5 +1,0 @@
-{
-	"name": "Twitgraphs",
-	"version": "0.0.1",
-	"dependencies" : {"sigma.js" : "1.2.0"}
-}
