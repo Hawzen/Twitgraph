@@ -1,11 +1,15 @@
+import itertools
+
+
 class Node:
 
     def __init__(self, user):
         self.user = user
+        self.id = user.id
         self.cursor = (0, -1)
         self.friendsIds = set()
-        self.edges = set() # Edges from self to other nodes in graph
-        self.done = (False, False)  # 1.Done adding everyone's ids   2.done adding everyone's USER object to graph dict
+        self.edges = set()  # Edges from self to other nodes in graph
+        self.done = (False, False)  # 1.Done adding friends' ids   2.Done adding friends' USER object to graph dict
 
     def addFriend(self, friends):
         self.friendsIds.update(friends)
@@ -13,11 +17,13 @@ class Node:
     def listSearch(self, api, depth=5000):
         """ """
         friendsDict = {}  # A dict of IDs to USER objects related which stores friends of user
-        rateLimit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
+        limit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
+        if limit == 0:
+            raise IOError("SEARCH LIST LIMIT REACHED")
 
         # Go through friends of self and add their ids to friendsIds and return the {ID : User} pair to graph
         cursor = self.cursor
-        for _ in range(rateLimit):
+        for _ in range(limit):
             friends, cursor = api.friends(screen_name=self.user.screen_name, count=200, cursor=self.cursor[1])
             friendsDict.update({friend.id: Node(friend) for friend in friends})
 
@@ -48,19 +54,25 @@ class Graph:
     def __init__(self):
         self.nodeNum = 0
         self.doneNum = 0
+
+        self._steps = 0
+        self._currentCost = -1
+
         self.origin = None
         self.nodes = {}  # {id : Node}
-        self.unexploredNodes = set() # Set of ids connected to nodes in self.nodes but yet to be added to self.nodes
+        self.leafIterator = None # Leaf node iterator
+        self.intIterator = None # Internal node iterator
+        self.unexploredIds = set()  # Set of ids connected to nodes in self.nodes but yet to be added to self.nodes
 
     def setOrigin(self, api, userName):
         self.origin = Node(api.get_user(userName))
         self.nodes.update({self.origin.user.id: self.origin})
 
     def collectUnexplored(self):
-        """Collects the union set of friendsIds in all nodes in self.nodes and stores them in self.unexploredNodes"""
+        """Collects the union set of friendsIds in all nodes in self.nodes and stores them in self.unexploredIds"""
         for node in self.nodes.values():
             temp = set(Id for Id in node.friendsIds if Id not in self.nodes.values())
-            self.unexploredNodes = self.unexploredNodes.union(temp)
+            self.unexploredIds = self.unexploredIds.union(temp)
 
     def getNodeNum(self):
         self.nodeNum = len(self.nodes)
@@ -72,24 +84,65 @@ class Graph:
 
     ###Searching Methods###
 
-    #TODO: Implement the method below
-    '''
+    def searchCost(self, ID: int):
+        """Return number of friends of node of id ID
+           Return -1 for nodes not in self.nodes"""
+        if ID in self.nodes.keys():
+            return len(self.nodes[ID].friendsIds)
+
+        return -1
+
+    def getFriends(self, node: Node):
+        """Return all friends of node that are in self.nodes in a set"""
+        return set(friend[1] for friend in self.nodes.items() if friend[0] in node.friendsIds)
+
+    def iterator(self, internal):
+        """
+        When internal == False
+        Return iterator over all leaf nodes
+
+        Otherwise return an iterator over all unique parents of leaf nodes
+        """
+        path = []
+        done = set()
+        current = self.origin.id  # Current is the current working node id
+        while True:
+            while any(node in self.nodes for node in current.friendsIds.difference(done)):  # While there are internal nodes
+                path.append(current)
+                friends = set(node not in done for node in current.friendsIds)  # Scrapes away already done nodes
+                current = min(friends, self.searchCost)  # Current could possibly be in internal node id or leaf node id
+
+            done.add(current.user.id)
+            if all(node not in self.nodes for node in current.friendsIds):  # If current is leaf node, i.e. not searched
+                if internal:
+                    path.pop()
+                    yield path.pop() # Get internal node id
+                else:
+                    yield path.pop() # Else get leaf node id
+
+            if all(node in done for node in self.origin.friendsIds):
+                raise StopIteration
+
+            current = path[-1]
+
     def listSearch_graph(self, api):
         """
-        Breadth first listSearch starting from origin's friends, executing one listSearch per call
+        executes list search starting from
         """
+        if not self.intIterator:
+            self.intIterator = self.iterator(True)
+
         try:
-            current
-        except NameError:
-            current = self.origin
-            
-        set().
-    '''
+            while True:
+                node = self.nodes[next(self.intIterator)]
+                self.nodes.update(node.listSearch(api))
+        except IOError:
+            pass
 
     def idSearch_graph(self, api):
         """
         Goes through self.nodes and gets ids of all nodes in it when node.done is False and stores them in the node's
-        node.friendsIds set. Then sets all(node.done) to True.
+        node.friendsIds set.
 
         Note: This method gets 5000 ids per user
         """
@@ -103,20 +156,19 @@ class Graph:
                 limit -= 1
 
                 node.idSearch(api)
-                self.doneNum += 1
         print("{} Nodes left".format(self.getNodeNum() - self.getDoneNum()))
 
     def mopSearch(self, api):
-        """Goes through self.unexploredNodes set and searches ids adds them to self.nodes"""
-        if not self.unexploredNodes:  # If its empty, collect unexplored
-            self.collectUnexplored()
+        """
+        Gets user id from self.leafIterator and executes api.getUser() on that id and adds resulting node to self.nodes
+        """
+        if not self.leafIterator:
+            self.leafIterator = self.iterator(False)
 
         limit = api.rate_limit_status()["resources"]['users']["/users/show/:id"]["remaining"]
-        print("idSearch limit is {}".format(limit))
         for _ in range(limit):
-            node = Node(api.getUser(self.unexploredNodes.pop()))
-            self.nodes.update({node.user.id: node})
-        print("{} Nodes left".format(len(self.unexploredNodes)))
+            node = Node(api.getUser(next(self.leafIterator)))
+            self.nodes.update({node.id: node})
 
     ###Edge Search Methods###
 
@@ -127,5 +179,3 @@ class Graph:
     def fullEdgeSearch(self):
         for node in self.nodes.values():
             self.edgeSearch(node)
-
-
