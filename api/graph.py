@@ -17,6 +17,7 @@ class Node:
         If limit does not run out before searching then assign self.done to (True, True)
 
         A depth parameter can be assigned to limit friend searching
+        Raises IOError When limit == 0
         """
         friendsDict = {}  # A dict of IDs to USER objects related which stores friends of user
         limit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
@@ -129,7 +130,7 @@ class Graph:
 
     def listSearch_graph(self, api):
         """
-        executes list search starting from
+        executes list search starting from origin until limit runs out or no further nodes need searching
         """
         if not self.intIterator:
             self.intIterator = self.iterator(True)
@@ -138,7 +139,7 @@ class Graph:
             while True:
                 node = self.nodes[next(self.intIterator)]
                 self.nodes.update(node.listSearch(api))
-        except IOError:
+        except IOError or StopIteration:
             pass
 
     def idSearch_graph(self, api):
