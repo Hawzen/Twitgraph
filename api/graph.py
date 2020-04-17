@@ -1,6 +1,3 @@
-import itertools
-
-
 class Node:
 
     def __init__(self, user):
@@ -14,8 +11,13 @@ class Node:
     def addFriend(self, friends):
         self.friendsIds.update(friends)
 
-    def listSearch(self, api, depth=5000):
-        """ """
+    def listSearch(self, api, depth=99999):
+        """
+        Returns dictionary of all friends of self {ID : Node} and a saves cursor in self.cursor
+        If limit does not run out before searching then assign self.done to (True, True)
+
+        A depth parameter can be assigned to limit friend searching
+        """
         friendsDict = {}  # A dict of IDs to USER objects related which stores friends of user
         limit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
         if limit == 0:
@@ -23,7 +25,7 @@ class Node:
 
         # Go through friends of self and add their ids to friendsIds and return the {ID : User} pair to graph
         cursor = self.cursor
-        for _ in range(limit):
+        for _ in range(min(limit, depth)):
             friends, cursor = api.friends(screen_name=self.user.screen_name, count=200, cursor=self.cursor[1])
             friendsDict.update({friend.id: Node(friend) for friend in friends})
 
