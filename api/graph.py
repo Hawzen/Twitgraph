@@ -50,7 +50,7 @@ class Node:
         ids = api.friends_ids(self.user.id, self.user.screen_name)
         self.addFriend(ids)  # Warning: Maximum of 5000
         self.friendsIds.update(ids)
-        self.done = True
+        self.done = (True, False)
 
 
 class Graph:
