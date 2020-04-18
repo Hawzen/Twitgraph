@@ -63,8 +63,8 @@ class Graph:
 
         self.origin = None
         self.nodes = {}  # {id : Node}
-        self.leafIterator = None # Leaf node iterator
-        self.intIterator = None # Internal node iterator
+        self.leafIterator = None  # Leaf node iterator
+        self.intIterator = None  # Internal node iterator
         self.unexploredIds = set()  # Set of ids connected to nodes in self.nodes but yet to be added to self.nodes
 
     def setOrigin(self, api, userName):
@@ -74,8 +74,8 @@ class Graph:
     def collectUnexplored(self):
         """Collects the union set of friendsIds in all nodes in self.nodes and stores them in self.unexploredIds"""
         for node in self.nodes.values():
-            temp = set(Id for Id in node.friendsIds if Id not in self.nodes.values())
-            self.unexploredIds = self.unexploredIds.union(temp)
+            self.unexploredIds = set(Id for Id in node.friendsIds if Id not in self.nodes.keys())
+            # self.unexploredIds = self.unexploredIds.union(temp)
 
     def getNodeNum(self):
         self.nodeNum = len(self.nodes)
@@ -89,7 +89,8 @@ class Graph:
 
     def searchCost(self, ID: int):
         """Return number of friends of node of id ID
-           Return -1 for nodes not in self.nodes"""
+           Return -1 for nodes not in self.nodes
+           Note: Be careful of inputting nodes that don't have their friendsIds set filled, they will always return 0"""
         if ID in self.nodes.keys():
             return len(self.nodes[ID].friendsIds)
 
@@ -105,32 +106,38 @@ class Graph:
         Return iterator over all leaf nodes
 
         Otherwise return an iterator over all unique parents of leaf nodes
+        Note: The second case does not work when the level of the graph is less than 3
         """
         path = []
         done = set()
         current = self.origin.id  # Current is the current working node id
         while True:
-            while any(node in self.nodes for node in current.friendsIds.difference(done)):  # While there are internal nodes
-                path.append(current)
-                friends = set(node not in done for node in current.friendsIds)  # Scrapes away already done nodes
-                current = min(friends, self.searchCost)  # Current could possibly be in internal node id or leaf node id
+            while current in self.nodes and \
+                    any(node in self.nodes for node in self.nodes[current].friendsIds.difference(done)):
+                # While current is internal and there are internal nodes
+                if current not in path: path.append(current)
+                friends = set(node for node in self.nodes[current].friendsIds if node not in done)  # Get all friendsIds except when done
+                current = min(friends, key=self.searchCost) # Gives off 0 if node.friendsIds is not updated
 
-            done.add(current.user.id)
-            if all(node not in self.nodes for node in current.friendsIds):  # If current is leaf node, i.e. not searched
+            path.append(current)
+            done.add(current)
+            if current not in self.nodes:  # If current is leaf node, i.e. not searched
                 if internal:
                     path.pop()
-                    yield path.pop() # Get internal node id
+                    yield path.pop()  # Get internal node id
                 else:
-                    yield path.pop() # Else get leaf node id
+                    yield path.pop()  # Get leaf node id
+            else:
+                path.pop()
 
             if all(node in done for node in self.origin.friendsIds):
                 raise StopIteration
 
             current = path[-1]
 
-    def listSearch_graph(self, api):
+    def listSearch_graph(self, api, depth=15):
         """
-        executes list search starting from origin until limit runs out or no further nodes need searching
+        Executes list search starting from origin until limit runs out or no further nodes need searching
         """
         if not self.intIterator:
             self.intIterator = self.iterator(True)
@@ -138,7 +145,7 @@ class Graph:
         try:
             while True:
                 node = self.nodes[next(self.intIterator)]
-                self.nodes.update(node.listSearch(api))
+                self.nodes.update(node.listSearch(api, depth))
         except IOError or StopIteration:
             pass
 
@@ -153,7 +160,7 @@ class Graph:
         print("idSearch limit is {}".format(limit))
 
         for node in self.nodes.values():
-            if not node.done:
+            if not any(node.done):
                 if limit < 1:
                     break
                 limit -= 1
@@ -164,6 +171,7 @@ class Graph:
     def mopSearch(self, api):
         """
         Gets user id from self.leafIterator and executes api.getUser() on that id and adds resulting node to self.nodes
+        limit number of times
         """
         if not self.leafIterator:
             self.leafIterator = self.iterator(False)
@@ -176,9 +184,40 @@ class Graph:
     ###Edge Search Methods###
 
     def edgeSearch(self, node: Node):
-        """Stores the intersection of node with self.nodes in node's edges"""
+        """Gets the intersection of given 'node' with self.nodes and stores them in node's edges set"""
         node.edges = node.friendsIds.intersection(set(self.nodes.keys()))
 
     def fullEdgeSearch(self):
         for node in self.nodes.values():
             self.edgeSearch(node)
+
+    ###Extra Methods###
+
+    def printFriends(self, node: Node, indent=0, depth=9):
+        if not node.edges:
+            self.edgeSearch(node)
+        crntIndent = " "*indent
+        full = f"{node.user.screen_name}:\t[{len(node.friendsIds)} Friends]\t[{len(node.edges)} Mutual Friends]\n"
+        partial = ""
+        count = 0
+        for count, friend in enumerate(node.friendsIds):
+            if friend in self.nodes:
+                full += f"{crntIndent}{count}. {self.nodes[friend].user.screen_name}\n"
+            else:
+                partial += f"{crntIndent}{count}. {friend}\n"
+            if count == depth:
+                break
+        print(full + partial + f"{crntIndent}And {len(node.friendsIds) - count} others\n")
+
+    def tree(self, start=None, indent=2, depth=9, done=None):
+        if not done:
+            done = set()
+        if not start:
+            start = self.origin
+
+        self.printFriends(start, indent, depth)
+        done.add(start)
+
+        for friend in start.friendsIds.difference(self.nodes.keys()):
+            if friend not in done:
+                self.tree(self.nodes[friend], 2+indent, depth, done)

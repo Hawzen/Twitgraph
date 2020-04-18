@@ -3,7 +3,7 @@ import shelve
 import json
 from api_funcs import *
 
-with open('twitterkeys and username.txt', 'r') as file:
+with open('twitterkeys.txt', 'r') as file:
     lines = file.read().split('\n')
 apiKey = lines[0]
 apiSecretKey = lines[1]
@@ -26,9 +26,17 @@ except KeyError:
     graph.nodes.update(graph.origin.listSearch(api))
     JSON = {}
 
-input("Continue?")
+graph.tree()
 
-with shelve.open("shelve/target_shelve") as sh:
+# graph.collectUnexplored()
+# graph.idSearch_graph(api)
+
+# generator = graph.iterator(False)
+# next(generator)
+# next(generator)
+# next(generator)
+
+with shelve.open("shelve/graph_shelve") as sh:
     saveJSON(JSON, graph)
     sh['JSON'] = JSON
     sh['graph'] = graph
