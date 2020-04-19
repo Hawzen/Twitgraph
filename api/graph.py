@@ -82,7 +82,7 @@ class Graph:
     def collectUnexplored(self):
         """Collects the union set of friendsIds in all nodes in self.nodes and stores them in self.unexploredIds"""
         for node in self.nodes.values():
-            self.unexploredIds = set(Id for Id in node.friendsIds if Id not in self.nodes.keys())
+            self.unexploredIds.update(set(Id for Id in node.friendsIds if Id not in self.nodes.keys()))
             # self.unexploredIds = self.unexploredIds.union(temp)
 
     def collectFriendless(self):
@@ -151,15 +151,16 @@ class Graph:
             if current == path[-1]: path.pop()  # FIXME: This is not elegant, should be redone
             current = path[-1]
 
-    def listSearch_graph(self, api):
+    def listSearch_graph(self, api, limit=-1):
         """
         Executes list search starting from origin until limit runs out or no further nodes need searching
 
-        Note: Limit on listSearch is set to 1
+        Note: Limit on each listSearch is set to 1
         """
         if not self.parentNodes:
             self.parentNodes = list(self.iterator(True))
-        limit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
+        if limit == -1:
+            limit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
 
         try:
             for _ in range(limit):
@@ -187,7 +188,7 @@ class Graph:
                 node.idSearch(api)
         print("{} Nodes left".format(self.getNodeNum() - self.getDoneNum()))
 
-    def mopSearch(self, api):
+    def mopSearch(self, api, limit = -1):
         """
         Gets user id from self.leafNodes and executes api.getUser() on that id and adds resulting node to self.nodes
         limit number of times
@@ -195,10 +196,18 @@ class Graph:
         if not self.leafNodes:
             self.leafNodes = list(self.iterator(False))
 
-        limit = api.rate_limit_status()["resources"]['users']["/users/show/:id"]["remaining"]
-        for _ in range(min([limit, len(self.leafNodes)])):
-            node = Node(api.get_user(self.leafNodes.pop(0)))
-            self.nodes.update({node.id: node})
+        # if not self.unexploredIds:
+        #     self.collectUnexplored()
+
+        if limit == -1:
+            limit = api.rate_limit_status()["resources"]['users']['/users/lookup']['remaining']
+
+        for _ in range(min([limit, len(self.leafNodes) // 100])):
+            users = api.lookup_users(self.leafNodes[0:100])
+            for user in users:
+                self.nodes.update({user.id: Node(user)})
+            self.leafNodes = self.leafNodes[100:]
+
 
     ###Edge Search Methods###
 
