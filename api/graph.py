@@ -37,18 +37,13 @@ class Node:
             friends, cursor = api.friends(screen_name=self.user.screen_name, count=200, cursor=self.cursor[1])
             friendsDict.update({friend.id: Node(friend) for friend in friends})
 
-            # If you finished going through all the friends for the specified depth then mark user as done and break
+            # when finished through all friends for specified depth then mark user as done and break
             if cursor[1] == 0:
                 self.done = (True, True)
                 break
 
-        # keep track of cursor
         self.cursor = cursor
-
-        # Update friendsIds set with all new ids from friendsDict
         self.friendsIds.update(friendsDict.keys())
-
-        # Return {ID : Node} pair to graph
         return friendsDict
 
     def idSearch(self, api):
@@ -57,7 +52,7 @@ class Node:
         ids = api.friends_ids(self.user.id, self.user.screen_name)
         self.addFriend(ids)  # Warning: Maximum of 5000
         self.friendsIds.update(ids)
-        self.done = (True, False)
+        self.done = (True, self.done[1])
 
 
 class Graph:
@@ -65,15 +60,13 @@ class Graph:
         self.nodeNum = 0
         self.doneNum = 0
 
-        self._steps = 0
-        self._currentCost = -1
-
         self.origin = None
         self.nodes = {}  # {id : Node}
-        self.leafNodes = []  # Leaf node queue
-        self.parentNodes = []  # Internal node queue
+        self.leafNodes = []  # Ids of every leaf node in self.nodes
+        self.parentNodes = []  # Ids of parents of every leaf node in self.nodes
+
         self.unexploredIds = set()  # Set of ids connected to nodes in self.nodes but yet to be added to self.nodes
-        self.friendlessNodes = set()
+        self.friendlessIds = set() # Set of ids of nodes that have length zero of the node.friendsIds set
 
     def setOrigin(self, api, userName):
         self.origin = Node(api.get_user(userName))
@@ -87,7 +80,7 @@ class Graph:
 
     def collectFriendless(self):
         """NOTE: CONSIDERS 0 FRIENDS AS FRIENDLESS"""
-        self.friendlessNodes = set(node for node in self.nodes.values() if len(node.friendsIds) == 0)
+        self.friendlessIds = set(node.id for node in self.nodes.values() if len(node.friendsIds) == 0)
 
     def getNodeNum(self):
         self.nodeNum = len(self.nodes)

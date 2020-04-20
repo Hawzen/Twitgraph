@@ -19,6 +19,11 @@ for _ in range(2):
 
     sleep(15*61)
 
+# TODO: Add level of node with respect to origin
+# TODO: Add database of twitter shelves
+# TODO: Search IDs automatically
+
+
 #graph.display()
 
 saveShelve(graph, JSON)
