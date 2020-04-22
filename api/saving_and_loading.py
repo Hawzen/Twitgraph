@@ -38,10 +38,10 @@ def loadAll():
     return api, graph, JSON
 
 
-def saveShelve(graph, JSON):
+def saveShelve(graph, JSON, onlyDone=False):
     """"""
     with shelve.open("shelve/graph_shelve") as sh:
-        saveJSON(JSON, graph)
+        saveJSON(JSON, graph, onlyDone)
 
         sh['JSON'] = JSON
         sh['graph'] = graph
@@ -54,24 +54,25 @@ def dumpData(JSON):
         json.dump(JSON, data, indent=8)
 
 
-def saveJSON(JSON, graph: Graph):
+def saveJSON(JSON, graph: Graph, onlyDone=False):
     # initialize JSON it with nodeNum, doneNum and origin values
     JSON.update({
         "variables": {
             "nodeNum": graph.getNodeNum(),
             "doneNum": graph.getDoneNum(),
-            "leafNodes": list(graph.iterator(False)),
-            "parentNodes": list(graph.iterator(True))
+            "leafNodes": graph.leafNodes,
+            "parentNodes": graph.parentNodes
         },
         "nodes": {},
-        "origin": {"friends ids": tuple(graph.origin.friendsIds), "edges": tuple(graph.origin.edges),
+        "origin": {"friends ids": len(graph.origin.friendsIds), "edges": tuple(graph.origin.edges),
                    "json": graph.origin.user._json, "done": str(graph.origin.done)}
     })
 
     # Add nodes in graph into JSON
     for node in graph.nodes.values():
+        if onlyDone and not any(node.done): continue
         JSON["nodes"].update(
             {node.id:
-                 {"friends ids": tuple(node.friendsIds), "edges": tuple(node.edges),
+                 {"friends ids": len(node.friendsIds), "edges": tuple(node.edges),
                   "json": node.user._json, "done": str(node.done)}
              })

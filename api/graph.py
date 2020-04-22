@@ -66,7 +66,7 @@ class Graph:
         self.parentNodes = []  # Ids of parents of every leaf node in self.nodes
 
         self.unexploredIds = set()  # Set of ids connected to nodes in self.nodes but yet to be added to self.nodes
-        self.friendlessIds = set() # Set of ids of nodes that have length zero of the node.friendsIds set
+        self.friendlessIds = set()  # Set of ids of nodes that have length zero of the node.friendsIds set
 
     def setOrigin(self, api, userName):
         self.origin = Node(api.get_user(userName))
@@ -181,7 +181,7 @@ class Graph:
                 node.idSearch(api)
         print("{} Nodes left".format(self.getNodeNum() - self.getDoneNum()))
 
-    def mopSearch(self, api, limit = -1):
+    def mopSearch(self, api, limit=-1):
         """
         Gets user id from self.leafNodes and executes api.getUser() on that id and adds resulting node to self.nodes
         limit number of times
@@ -200,7 +200,6 @@ class Graph:
             for user in users:
                 self.nodes.update({user.id: Node(user)})
             self.leafNodes = self.leafNodes[100:]
-
 
     ###Edge Search Methods###
 
@@ -228,14 +227,16 @@ class Graph:
                 partial += f"{crntIndent}{count}. {friend}\n"
             if count == depth:
                 break
-        return full + partial + f"{crntIndent}And {len(node.friendsIds) - count} others\n"
+        return full + partial + f"{crntIndent}And {len(node.friendsIds) - count} others\n\n"
 
-    def display(self, start=None, num=100, indent=2, depth=9, done=None):
+    def display(self, start=None, num=100, indent=2, depth=9):
         if not start:
             start = self.origin
         output = self.printFriends(start, indent, depth)
-        printableNum = sum(1 for node in self.nodes.values() if any(node.done))  # Num of nodes with node.done: (False, True)
-        completeNum = sum(1 for node in self.nodes.values() if all(node.done))  # Num of nodes with node.done: (True, True)
+        printableNum = sum(
+            1 for node in self.nodes.values() if any(node.done))  # Num of nodes with node.done: (False, True)
+        completeNum = sum(
+            1 for node in self.nodes.values() if all(node.done))  # Num of nodes with node.done: (True, True)
 
         for count, friend in enumerate(self.nodes.keys()):
             if any(self.nodes[friend].done):
