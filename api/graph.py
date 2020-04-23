@@ -48,7 +48,8 @@ class Node:
 
     def idSearch(self, api):
         """Gets the first 5000 ids of self's friends and adds them to the friendsIds set then sets self.done[0] to True"""
-
+        if self.user.protected:
+            return
         ids = api.friends_ids(self.user.id, self.user.screen_name)
         self.addFriend(ids)  # Warning: Maximum of 5000
         self.friendsIds.update(ids)
@@ -175,6 +176,7 @@ class Graph:
         for node in self.nodes.values():
             if not any(node.done):
                 if limit < 1:
+                    print("Reached Limit, breaking...")
                     break
                 limit -= 1
 
@@ -249,3 +251,6 @@ class Graph:
                           f"Number of nodes printed is {count + 1}\n"
                 break
         print(output)
+
+
+import tweepy
