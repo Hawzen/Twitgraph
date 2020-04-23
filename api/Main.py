@@ -23,8 +23,8 @@ for i in range(enumerations):
     print(f"Finish going through {i+1} loop, sleeping for 15 minutes and 15 seconds\n")
 
     for minute in range(15):
-        s = "░ MINUTES UNTIL NEXT BATCH\t{:>02}, {:>02}".format(15 - minute, minute)
-        print(s, end="\r")
+        s = "\r░ MINUTES UNTIL NEXT BATCH\t{:>02}".format(15 - minute)
+        print(s, end=" ")
         sleep(60)
     sleep(15)
 

@@ -50,9 +50,13 @@ class Node:
         """Gets the first 5000 ids of self's friends and adds them to the friendsIds set then sets self.done[0] to True"""
         if self.user.protected:
             return
-        ids = api.friends_ids(self.user.id, self.user.screen_name)
-        self.addFriend(ids)  # Warning: Maximum of 5000
-        self.friendsIds.update(ids)
+
+        try:
+            ids = api.friends_ids(self.user.id, self.user.screen_name)
+            self.addFriend(ids)  # Warning: Maximum of 5000
+            self.friendsIds.update(ids)
+        except tweepy.error.TweepError:
+            pass
         self.done = (True, self.done[1])
 
 
