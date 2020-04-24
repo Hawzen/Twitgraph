@@ -35,8 +35,7 @@ for i in range(enumerations):
 
 # graph.display()
 
-# saveShelve(graph, JSON, True)
+saveShelve(graph, JSON, True, checkEdges=True)
 
-# if input("Save data? (y/n) ") == "y":
-#     graph.fullEdgeSearch()
-#     dumpData(JSON)
+if input("Save data? (y/n) ") == "y":
+    dumpData(JSON)

@@ -182,9 +182,9 @@ class Graph:
                 if limit < 1:
                     print("Reached Limit, breaking...")
                     break
-                limit -= 1
 
                 node.idSearch(api)
+                limit -= 1
         print("{} Nodes left".format(self.getNodeNum() - self.getDoneNum()))
 
     def mopSearch(self, api, limit=-1):
@@ -211,7 +211,7 @@ class Graph:
 
     def edgeSearch(self, node: Node):
         """Gets the intersection of given 'node' with self.nodes and stores them in node's edges set"""
-        node.edges = node.friendsIds.intersection(set(self.nodes.keys()))
+        node.edges = set(self.nodes).intersection(node.friendsIds)
 
     def fullEdgeSearch(self):
         for node in self.nodes.values():

@@ -38,8 +38,11 @@ def loadAll():
     return api, graph, JSON
 
 
-def saveShelve(graph, JSON, onlyDone=False):
+def saveShelve(graph, JSON, onlyDone=False, checkEdges=False):
     """"""
+    if checkEdges:
+        graph.fullEdgeSearch()
+
     with shelve.open("shelve/graph_shelve") as sh:
         saveJSON(JSON, graph, onlyDone)
 
@@ -50,7 +53,7 @@ def saveShelve(graph, JSON, onlyDone=False):
 def dumpData(JSON):
     """Dumps given JSON to data.json file"""
     with open("../data/data.json", "w") as data:
-        data.write("data = ")
+        data.write("let data = ")
         json.dump(JSON, data, indent=8)
 
 
@@ -65,12 +68,14 @@ def saveJSON(JSON, graph: Graph, onlyDone=False):
         },
         "nodes": {},
         "origin": {"friends ids": len(graph.origin.friendsIds), "edges": tuple(graph.origin.edges),
-                   "json": graph.origin.user._json, "done": str(graph.origin.done)}
+                              "json": graph.origin.user._json, "done": str(graph.origin.done)}
     })
 
     # Add nodes in graph into JSON
     for node in graph.nodes.values():
         if onlyDone and not any(node.done): continue
+        if node.id == graph.origin.id: continue
+
         JSON["nodes"].update(
             {node.id:
                  {"friends ids": len(node.friendsIds), "edges": tuple(node.edges),
