@@ -19,7 +19,7 @@ for i in range(enumerations):
     # for _ in range(min((mopLimit, 200))): # Suspends executing for some reason after requesting within limit, FIXME
     #     graph.mopSearch(api)
     #     saveShelve(graph, JSON)
-    saveShelve(graph, JSON, True)
+    saveShelve(graph, JSON, True, True)
     print(f"Finish going through {i+1} loop, sleeping for 15 minutes and 15 seconds\n")
 
     for minute in range(15):

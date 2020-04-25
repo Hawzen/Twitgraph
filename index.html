@@ -72,22 +72,40 @@
             position: absolute;
         }
       </style>
-    </div>
+    </div>  
 
     <div id="info">
-        <style>
-            #info {
-                position: fixed;
-                float: left;
-                margin-top: 0.5em;
-                background-color: rgba(0,  0, 70, 0.95);
-                border: 0 solid yellow;
-                width: 20em;
-                height: 15em;
-                color: rgba(255,  255, 255, 1);
-            }
-        </style>
+      <div class="infoBox">
+      </div>
     </div>
+
+        <style>
+            .infoBox {
+              position: absolute;
+              margin-top: 1em ;
+              margin-left: 3em ;
+              margin-bottom: 1em ;
+              width: 60ch ;
+              height: 25ch auto;
+              font-family: monospace;
+
+              /*
+              background-color and color are controlled
+              by the js in script.js
+              */
+            }
+
+            
+            .infoBox img { 
+              z-index: 5;
+              position: absolute;
+              max-width: 100%;
+              max-height: 100%;
+            }
+
+        </style>
+
+
     <script type="text/javascript" src="data/data.json"></script>
     <script src="graph/script.js"></script>
   </body>

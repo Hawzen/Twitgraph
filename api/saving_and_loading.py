@@ -67,7 +67,7 @@ def saveJSON(JSON, graph: Graph, onlyDone=False):
             "parentNodes": graph.parentNodes
         },
         "nodes": {},
-        "origin": {"friends ids": len(graph.origin.friendsIds), "edges": tuple(graph.origin.edges),
+        "origin": {"friends ids": len(graph.origin.friendsIds), "edges": tuple(str(edge) for edge in graph.origin.edges),
                               "json": graph.origin.user._json, "done": str(graph.origin.done)}
     })
 
@@ -77,7 +77,7 @@ def saveJSON(JSON, graph: Graph, onlyDone=False):
         if node.id == graph.origin.id: continue
 
         JSON["nodes"].update(
-            {node.id:
-                 {"friends ids": len(node.friendsIds), "edges": tuple(node.edges),
+            {str(node.id):
+                 {"friends ids": len(node.friendsIds), "edges": tuple(str(edge) for edge in node.edges),
                   "json": node.user._json, "done": str(node.done)}
              })

@@ -48,9 +48,6 @@ class Node:
 
     def idSearch(self, api):
         """Gets the first 5000 ids of self's friends and adds them to the friendsIds set then sets self.done[0] to True"""
-        if self.user.protected:
-            return
-
         try:
             ids = api.friends_ids(self.user.id, self.user.screen_name)
             self.addFriend(ids)  # Warning: Maximum of 5000
@@ -110,7 +107,7 @@ class Graph:
         """Return all friends of node that are in self.nodes in a set"""
         return set(friend[1] for friend in self.nodes.items() if friend[0] in node.friendsIds)
 
-    def iterator(self, internal):
+    def iterator(self, internal): # FIXME REDO THIS USING QUEUE
         """
         When internal == False
         Return iterator over all leaf nodes
@@ -178,7 +175,7 @@ class Graph:
         print("idSearch limit is {}".format(limit))
 
         for node in self.nodes.values():
-            if not any(node.done):
+            if not any(node.done) and not node.user.protected:
                 if limit < 1:
                     print("Reached Limit, breaking...")
                     break
