@@ -8,6 +8,10 @@ class Node:
         self.edges = set()  # Edges from self to other nodes in graph
         self.done = (False, False)  # 1.Done adding friends' ids   2.Done adding friends' USER object to graph dict
 
+    def __repr__(self):
+        return f"Name:\t{self.user.name}\nID:\t{self.id}\nFollowing:\t{len(self.friendsIds)}\n" \
+               f"Done:\t{str(self.done)}\nURL:\thttps://twitter.com/{self.user.screen_name}"
+
     def addFriend(self, friends):
         self.friendsIds.update(friends)
 
@@ -47,7 +51,8 @@ class Node:
         return friendsDict
 
     def idSearch(self, api):
-        """Gets the first 5000 ids of self's friends and adds them to the friendsIds set then sets self.done[0] to True"""
+        """Gets the first 5000 ids of self's friends and adds them to the friendsIds set then sets self.done[0] to
+        True """
         try:
             ids = api.friends_ids(self.user.id, self.user.screen_name)
             self.addFriend(ids)  # Warning: Maximum of 5000
@@ -74,15 +79,21 @@ class Graph:
         self.origin = Node(api.get_user(userName))
         self.nodes.update({self.origin.user.id: self.origin})
 
+    ###Getter Methods###
+
+    def checkFollowers(self, Id):
+        return tuple(node.id for node in self.nodes.values() if Id in node.edges)
+
     def collectUnexplored(self):
         """Collects the union set of friendsIds in all nodes in self.nodes and stores them in self.unexploredIds"""
         for node in self.nodes.values():
             self.unexploredIds.update(set(Id for Id in node.friendsIds if Id not in self.nodes.keys()))
             # self.unexploredIds = self.unexploredIds.union(temp)
+        return self.unexploredIds
 
     def collectFriendless(self):
         """NOTE: CONSIDERS 0 FRIENDS AS FRIENDLESS"""
-        self.friendlessIds = set(node.id for node in self.nodes.values() if len(node.friendsIds) == 0)
+        return set(node.id for node in self.nodes.values() if len(node.friendsIds) == 0)
 
     def getNodeNum(self):
         self.nodeNum = len(self.nodes)
@@ -107,7 +118,7 @@ class Graph:
         """Return all friends of node that are in self.nodes in a set"""
         return set(friend[1] for friend in self.nodes.items() if friend[0] in node.friendsIds)
 
-    def iterator(self, internal): # FIXME REDO THIS USING QUEUE
+    def iterator(self, internal):  # FIXME REDO THIS USING QUEUE
         """
         When internal == False
         Return iterator over all leaf nodes
@@ -206,13 +217,21 @@ class Graph:
 
     ###Edge Search Methods###
 
-    def edgeSearch(self, node: Node):
+    def edgeSearch(self, node: Node, nodesSet=None):
         """Gets the intersection of given 'node' with self.nodes and stores them in node's edges set"""
-        node.edges = set(self.nodes).intersection(node.friendsIds)
+        if nodesSet is None:
+            nodesSet = set(self.nodes)
 
-    def fullEdgeSearch(self):
-        for node in self.nodes.values():
-            self.edgeSearch(node)
+        node.edges = nodesSet.intersection(node.friendsIds)
+
+    def fullEdgeSearch(self, numNodes):
+        """Repeats for all nodes when numNodes == 0"""
+        nodesSet = set(self.nodes)
+        for i, node in enumerate(self.nodes.values()):
+            self.edgeSearch(node, nodesSet)
+
+            if i + 1 == numNodes:
+                break
 
     ###Extra Methods###
 

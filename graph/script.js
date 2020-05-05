@@ -1,4 +1,4 @@
-data.nodes = Object.fromEntries(Object.entries(data['nodes']).slice(0, 50));
+data.nodes = Object.fromEntries(Object.entries(data['nodes']).slice(0, 20));
 data.nodes[data.origin.json.id_str] = data.origin;
 
 let friend, current, counter, angle, id, index, node, element, elements, box, // Structure this
@@ -112,7 +112,7 @@ function displayDetails(node, append=false){
 	let image = `<img src=${node.json.profile_image_url}>`;
 
     let header = `<h3 style="text-align:center;">
-    		<a href=https://twitter.com/${node.json.screen_name}>${node.json.name}"</a><br>
+    		<a href=https://twitter.com/${node.json.screen_name}>${node.json.name}</a><br>
             ${node.json.friends_count} Following&emsp;
             ${node.json.followers_count} Followers<br><hr style="width:50%;">`;
 
@@ -220,30 +220,6 @@ var s = new sigma({
         }
     }
 });
-
-/*
-* TIP: DONE
-*   Create an array to store properties for each edge, node and edit them when you
-*      want to change the properties, of the nodes or edges
-*
-* FIXME: Line 161 DONE
-*   1. Should change properties upon clicking but revert upon clicking again	DONE
-*   2. Should change other properties than the listed ones 	DONE
-*   3. Should change properties the instance clicked, not after dragging	Canceled
-*
-* FIXME: Line 150
-*   1. Complete showing the details DONE
-*   2. Change the look of the DIV box DONE
-*   3. Make the DIV box appear on the right side Canceled
-*   4. Make text size smaller DONE
-*
-* FIXME: DONE
-*   1. Change all properties of nodes first initialised DONE
-*   2. Change all properties of edges first initialised DONE
-*   3. Make clickStage event, return the nodes as they were DONE
-*   4. Add color pallets DONE
-* */
-
 
 // Modify these to modify graph
 const edges = s.graph.edges();
