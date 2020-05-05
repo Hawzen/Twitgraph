@@ -11,8 +11,8 @@ def getClusters(nodes: dict, numClusters: int = 2):
             clusters = getEigenvec(createLaplacian(createAdjacency(nodes)))
             continue
 
-        keys = tuple(key for key, group in groupby(clusters))
-        freq = tuple(len(tuple(group)) for key, group in groupby(clusters))
+        keys = tuple(key for key, group in groupby(np.sort(clusters)))
+        freq = tuple(len(tuple(group)) for key, group in groupby(np.sort(clusters)))
         cluster = keys[freq.index(max(freq))] # split this cluster into two
 
         vec = getEigenvec(createLaplacian(createAdjacency(nodes, tuple(clusters == cluster)))) + 2 * i
@@ -20,7 +20,7 @@ def getClusters(nodes: dict, numClusters: int = 2):
         cnt = 0
         for index, el in enumerate(clusters):
             if el == cluster:
-                clusters[i] = vec[cnt]
+                clusters[index] = vec[cnt]
                 cnt += 1
 
     out = {}
@@ -29,7 +29,7 @@ def getClusters(nodes: dict, numClusters: int = 2):
     return out
 
 
-def createAdjacency(nodes: dict, indices: tuple[bool, ...] = None) -> np.ndarray:
+def createAdjacency(nodes: dict, indices: tuple = None) -> np.ndarray:
     """Creates a symmetric adjacency matrix
     For each node in nodes, create vector v such that v[i] = 1 if the ith Id in nodes is in node.edges
     or node.id is in ith node.edges else 0
@@ -63,9 +63,9 @@ def createLaplacian(A: np.ndarray) -> np.ndarray:
 def getEigenvec(L: np.ndarray) -> np.ndarray:
     """Given laplacian matrix return normal eigenvector associated with second eigenvalue"""
     vals, vecs = np.linalg.eig(L)
-    print(vals, vecs[:, 1])
+    index = np.where(vals == np.partition(vals, 1)[1])[0][0]
 
-    vec = vecs[:, 1]  # Eigenvector associated with the second eigenvalues
+    vec = vecs[:, index]  # Eigenvector associated with the second eigenvalues
     for i, el in enumerate(vec):
         if el < 0:
             vec[i] = 1

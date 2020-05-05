@@ -40,13 +40,24 @@ def loadAll():
     return api, graph, JSON
 
 
-def saveShelve(graph: Graph, JSON, onlyDone=False, checkEdges=False, checkClusters=False, numNodes=0):
+def saveShelve(graph: Graph, JSON, onlyDone=False, checkEdges=False, checkClusters=False, numNodes=0, numClusters=2):
     """"""
     if checkEdges:
         graph.fullEdgeSearch(numNodes)
 
+    if checkClusters:
+        cutNodes = {} # Sliced version of dict
+        for i, node in enumerate(graph.nodes.values()):
+            if i == numNodes:
+                break
+            i += 1
+
+            cutNodes.update({node.id: node})
+    clusters = None if not checkClusters else getClusters(cutNodes, numClusters)
+
+
     with shelve.open("shelve/graph_shelve") as sh:
-        JSON = saveJSON(JSON, graph, onlyDone, numNodes)
+        JSON = saveJSON(JSON, graph, onlyDone, numNodes, clusters)
 
         sh['JSON'] = JSON
         sh['graph'] = graph
@@ -59,25 +70,29 @@ def dumpData(JSON):
         json.dump(JSON, data, indent=8)
 
 
-def saveJSON(JSON, graph: Graph, onlyDone=False, numNodes=0):
+def saveJSON(JSON, graph: Graph, onlyDone=False, numNodes=0, clusters=None):
     """Updates the JSON dict and returns it
     onlyDone adds the nodes which pass any(node.done)
     numNodes only add the number of nodes specified by it, 0 means all"""
+    if clusters is None:
+        clusters = {}
     if numNodes:
         JSON = {}
 
     # initialize JSON with nodeNum, doneNum and origin values
     JSON.update({
         "variables": {
-            "nodeNum": graph.getNodeNum(),
-            "doneNum": graph.getDoneNum(),
-            "leafNodes": graph.leafNodes,
-            "parentNodes": graph.parentNodes
+            "nodeNum": numNodes if numNodes else graph.getNodeNum(),
+            # "doneNum": graph.getDoneNum(),
+            "clusters": tuple(set(clusters.values()))
         },
         "nodes": {},
         "origin": {"friends ids": len(graph.origin.friendsIds),
                    "edges": tuple(str(edge) for edge in graph.origin.edges),
-                   "json": graph.origin.user._json, "done": str(graph.origin.done)}
+                   "json": graph.origin.user._json,
+                   "done": str(graph.origin.done),
+                   "cluster": 0 if graph.origin.id not in clusters else clusters[graph.origin.id]
+                   }
     })
 
     # Add nodes in graph into JSON
@@ -95,8 +110,12 @@ def saveJSON(JSON, graph: Graph, onlyDone=False, numNodes=0):
 
         JSON["nodes"].update(
             {str(node.id):
-                 {"friends ids": len(node.friendsIds), "edges": tuple(str(edge) for edge in node.edges),
-                  "json": node.user._json, "done": str(node.done)}
+                 {"friends ids": len(node.friendsIds),
+                  "edges": tuple(str(edge) for edge in node.edges),
+                  "json": node.user._json,
+                  "done": str(node.done),
+                  "cluster": 0 if node.id not in clusters else clusters[node.id]
+                  }
              })
 
     return JSON

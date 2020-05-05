@@ -36,7 +36,7 @@ enumerations = 80
 
 # graph.display()
 
-saveShelve(graph, JSON, onlyDone=True, checkEdges=True, numNodes=100)
+saveShelve(graph, JSON, onlyDone=True, checkEdges=True, checkClusters=True, numNodes=20, numClusters=6)
 
 if input("Save data? (y/n) ") == "y":
     dumpData(JSON)
