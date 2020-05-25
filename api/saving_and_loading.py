@@ -3,10 +3,9 @@ from spectral_clustering import getClusters
 import tweepy
 import shelve
 import json
+import sys
 
-
-
-def loadAll():
+def loadAll(screenName):
     """Gets apiKey, apiSecretKey, accessToken, accessTokenSecret and username from file twitterkeys.txt in
     the same directory, preforms api authentication
     then loads graph and JSON objects from shelve If either does not exist then creates them and set graph origin as
@@ -20,7 +19,6 @@ def loadAll():
     apiSecretKey = lines[1]
     accessToken = lines[2]
     accessTokenSecret = lines[3]
-    username = lines[4]
 
     auth = tweepy.OAuthHandler(apiKey, apiSecretKey)
     auth.set_access_token(accessToken, accessTokenSecret)
@@ -29,84 +27,95 @@ def loadAll():
     # Keep track of object target
     try:
         with shelve.open("shelve/graph_shelve") as sh:
-            graph = sh['graph']
-            JSON = sh["JSON"]
+            graph = sh[screenName]
     except KeyError:
+        if input("Is the screen name you entered new? (y, n) ") == "n": # FIXME
+            print("screen name not found, quitting")
+            sys.exit()
+
         graph = Graph()
-        graph.setOrigin(api, username)
-        graph.nodes.update(graph.origin.listSearch(api))
-        JSON = {}
+        graph.setOrigin(api, screenName)
 
-    return api, graph, JSON
+    return api, graph
 
 
-def saveShelve(graph: Graph, JSON, onlyDone=False, checkEdges=False, checkClusters=False, numNodes=0, numClusters=2):
+def saveShelve(screenName, graph: Graph, dumb=False, onlyDone=True, checkEdges=False, checkClusters=False, numNodes=0, numPartitions=0):
     """"""
-    if checkEdges:
-        graph.fullEdgeSearch(numNodes)
-
-    if checkClusters:
-        cutNodes = {} # Sliced version of dict
-        for i, node in enumerate(graph.nodes.values()):
-            if i == numNodes:
-                break
-            i += 1
-
-            cutNodes.update({node.id: node})
-    clusters = None if not checkClusters else getClusters(cutNodes, numClusters)
-
 
     with shelve.open("shelve/graph_shelve") as sh:
-        JSON = saveJSON(JSON, graph, onlyDone, numNodes, clusters)
+        sh[screenName] = graph
 
-        sh['JSON'] = JSON
-        sh['graph'] = graph
+    if dumb:
+
+        if checkEdges:
+            graph.fullEdgeSearch(numNodes)
+        if numNodes == 0:
+            numNodes = sum(1 for Id in graph.nodes.keys() if any(graph.nodes[Id].done))
+        if numPartitions == 0:
+            numPartitions = numNodes // 10
+        clusters = None
+        clusterSizes = None
+        # If checkClusters then generate clusters dict and sizes dict
+        if checkClusters:
+            cutNodes = {}  # Sliced version of dict
+            for i, node in enumerate(graph.nodes.values()):
+                if i == numNodes:
+                    break
+                i += 1
+                cutNodes.update({node.id: node})
+            clusters = getClusters(cutNodes, numPartitions)
+            clusterSizes = dict(
+                map(lambda x: (str(x), sum(1 for el in clusters.values() if el == x)), set(clusters.values())))
+
+        _dumpData(_saveJSON(graph, numNodes, onlyDone, clusters, clusterSizes))
 
 
-def dumpData(JSON):
+def _dumpData(JSON):
     """Dumps given JSON to data.json file"""
     with open("../data/data.json", "w") as data:
         data.write("let data = ")
         json.dump(JSON, data, indent=8)
 
 
-def saveJSON(JSON, graph: Graph, onlyDone=False, numNodes=0, clusters=None):
+def _saveJSON(graph: Graph, numNodes, onlyDone=True, clusters=None, clusterSizes=None):
     """Updates the JSON dict and returns it
     onlyDone adds the nodes which pass any(node.done)
     numNodes only add the number of nodes specified by it, 0 means all"""
     if clusters is None:
         clusters = {}
-    if numNodes:
-        JSON = {}
+    JSON = {}
 
+    clustersTuple = sorted(list(set(clusters.values())), key=lambda x: -1/x if str(x)[0] == "1" else x)
+    clustersTuple = tuple(map(lambda x: str(x), clustersTuple))
     # initialize JSON with nodeNum, doneNum and origin values
     JSON.update({
         "variables": {
             "nodeNum": numNodes if numNodes else graph.getNodeNum(),
             # "doneNum": graph.getDoneNum(),
-            "clusters": tuple(set(clusters.values()))
+            "clusters": clustersTuple,
+            "numClusters": len(clustersTuple),
+            "clusterSizes": {} if clusterSizes is None else clusterSizes
         },
         "nodes": {},
         "origin": {"friends ids": len(graph.origin.friendsIds),
                    "edges": tuple(str(edge) for edge in graph.origin.edges),
                    "json": graph.origin.user._json,
                    "done": str(graph.origin.done),
-                   "cluster": 0 if graph.origin.id not in clusters else clusters[graph.origin.id]
+                   "cluster": "5" if graph.origin.id not in clusters else str(clusters[graph.origin.id])
                    }
     })
 
     # Add nodes in graph into JSON
 
-    if numNodes: i = 0
+    i = 0
     for node in graph.nodes.values():
-        if onlyDone and not any(node.done): continue
-        if node.id == graph.origin.id: continue
+        if onlyDone and not any(node.done) or node.id == graph.origin.id:
+            continue
 
         if numNodes:
             if numNodes == i:
                 break
-            else:
-                i += 1
+            i += 1
 
         JSON["nodes"].update(
             {str(node.id):
@@ -114,7 +123,7 @@ def saveJSON(JSON, graph: Graph, onlyDone=False, numNodes=0, clusters=None):
                   "edges": tuple(str(edge) for edge in node.edges),
                   "json": node.user._json,
                   "done": str(node.done),
-                  "cluster": 0 if node.id not in clusters else clusters[node.id]
+                  "cluster": "5" if node.id not in clusters else str(clusters[node.id])
                   }
              })
 

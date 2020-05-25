@@ -9,29 +9,23 @@ class Node:
         self.done = (False, False)  # 1.Done adding friends' ids   2.Done adding friends' USER object to graph dict
 
     def __repr__(self):
-        return f"Name:\t{self.user.name}\nID:\t{self.id}\nFollowing:\t{len(self.friendsIds)}\n" \
-               f"Done:\t{str(self.done)}\nURL:\thttps://twitter.com/{self.user.screen_name}"
+        return f"{self.id}\t{self.user.screen_name}\t{self.done}"
 
     def addFriend(self, friends):
         self.friendsIds.update(friends)
 
-    def listSearch(self, api, depth=99999, limit=1):
+    def listSearch(self, api, depth=99999):
         """
         Returns dictionary of all friends of self {ID : Node} and a saves cursor in self.cursor
         If limit does not run out before searching then assign self.done to (True, True)
 
-        A depth parameter can be assigned to get a specific number of friends, if depth > total friends of self then
-        the method will stop after it gets all friends
+        A depth parameter can be assigned to control how many batches of friends the function should get.
+        This is important if the user is friends to more than 20 people. decreasing the depth casts a wider, but shallower net
 
-        Raises IOError When limit == 0
-
-        When given a limit of -1 it computes the limit then searches until it
-        finds all of self' friends or the limit runs out
+        Note: each call to api.friends results in a maximum of 20 users returned
         """
         friendsDict = {}  # A dict of {IDs: Node} objects related which stores friends of user
-        if limit == -1:
-            limit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
-
+        limit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
         if limit == 0:
             raise IOError("listSearch LIMIT REACHED")
 
@@ -54,8 +48,8 @@ class Node:
         """Gets the first 5000 ids of self's friends and adds them to the friendsIds set then sets self.done[0] to
         True """
         try:
-            ids = api.friends_ids(self.user.id, self.user.screen_name)
-            self.addFriend(ids)  # Warning: Maximum of 5000
+            ids = api.friends_ids(self.user.id, self.user.screen_name)  # Warning: Maximum of 5000
+
             self.friendsIds.update(ids)
         except tweepy.error.TweepError:
             pass
@@ -87,8 +81,13 @@ class Graph:
     def collectUnexplored(self):
         """Collects the union set of friendsIds in all nodes in self.nodes and stores them in self.unexploredIds"""
         for node in self.nodes.values():
-            self.unexploredIds.update(set(Id for Id in node.friendsIds if Id not in self.nodes.keys()))
-            # self.unexploredIds = self.unexploredIds.union(temp)
+            if any(node.done):
+                s = set(Id for Id in node.friendsIds if Id not in self.nodes.keys())
+                if len(s) == 0:
+                    node.done = (True, True)
+                else:
+                    self.unexploredIds.update(s)
+                # self.unexploredIds = self.unexploredIds.union(temp)
         return self.unexploredIds
 
     def collectFriendless(self):
@@ -118,7 +117,7 @@ class Graph:
         """Return all friends of node that are in self.nodes in a set"""
         return set(friend[1] for friend in self.nodes.items() if friend[0] in node.friendsIds)
 
-    def iterator(self, internal):  # FIXME REDO THIS USING QUEUE
+    def iterator(self, internal):  # FIXME Redo using breadth first search
         """
         When internal == False
         Return iterator over all leaf nodes
@@ -130,12 +129,13 @@ class Graph:
         path = [current]  # Stack to keep track of current path
         done = set()  # Set to keep track of which nodes already yielded
         while True:
+
             # While current is internal and there are internal nodes connected to it that arent in done
             while current in self.nodes and \
                     any(ID in self.nodes for ID in self.nodes[current].friendsIds if ID not in done and ID not in path):
 
                 # Add current to path if isn't the last element
-                if current != path[-1]: path.append(current)  # FIXME: This is not elegant, should be redone
+                if current != path[-1]: path.append(current)  # FIXME
 
                 # Get all friendsIds except when done or when already passed
                 friends = set(ID for ID in self.nodes[current].friendsIds if ID not in done and ID not in path)
@@ -154,66 +154,97 @@ class Graph:
 
             if all(node in done for node in self.origin.friendsIds):
                 raise StopIteration
-            if current == path[-1]: path.pop()  # FIXME: This is not elegant, should be redone
+            if current == path[-1]: path.pop()  # FIXME
             current = path[-1]
 
-    def listSearch_graph(self, api, limit=-1):
-        """
-        Executes list search starting from origin until limit runs out or no further nodes need searching
+    def iterator2(self):
+        visited = {Id: False for Id in self.nodes}
+        stack = [self.origin.id]
 
-        Note: Limit on each listSearch is set to 1
-        """
-        if not self.parentNodes:
-            self.parentNodes = list(self.iterator(True))
-        if limit == -1:
-            limit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
+        yielded = set()
 
-        try:
-            for _ in range(limit):
-                node = self.nodes[self.parentNodes.pop(0)]
-                self.nodes.update(node.listSearch(api, limit=1))
-        except IOError or StopIteration:
-            pass
+        while stack:
+            current = stack.pop()
+            visited[current] = True
+
+            for Id in self.nodes[current].friendsIds:
+                if Id in self.nodes:
+                    if not visited[Id] and Id not in stack:
+                        stack.append(Id)
+                else:
+                    if Id not in yielded:
+                        yielded.add(Id)
+                        yield Id
 
     def idSearch_graph(self, api):
         """
-        Goes through self.nodes and gets ids of all nodes in it when node.done is False and stores them in the node's
+        Gets friends ids of nodes if they aren't stored already, and stores them in the node's
         node.friendsIds set.
 
+        Usage: Use this to quickly get many ids of related nodes. This is better used before mopSearch and listSearch
         Note: This method gets 5000 ids per user
         """
         limit = api.rate_limit_status()["resources"]['friends']["/friends/ids"]["remaining"]
-        print("idSearch limit is {}".format(limit))
 
         for node in self.nodes.values():
-            if not any(node.done) and not node.user.protected:
-                if limit < 1:
-                    print("Reached Limit, breaking...")
-                    break
+            if not any(node.done):  # If already done skip
+                if not node.user.protected:  # If protected label done and skip
+                    if limit < 1:
+                        print("Reached Limit idSearch, breaking...")
+                        break
 
-                node.idSearch(api)
-                limit -= 1
-        print("{} Nodes left".format(self.getNodeNum() - self.getDoneNum()))
+                    node.idSearch(api)
+                    limit -= 1
+                else:
+                    node.done = (True, False)
 
-    def mopSearch(self, api, limit=-1):
-        """
-        Gets user id from self.leafNodes and executes api.getUser() on that id and adds resulting node to self.nodes
-        limit number of times
-        """
+    def mopSearch(self, api):
+        """ Gets friends of users and adds them to self.nodes"""
+        # nodeList = list(self.collectUnexplored())  # Look up these nodes
         if not self.leafNodes:
             self.leafNodes = list(self.iterator(False))
+        nodeList = self.leafNodes
+        limit = api.rate_limit_status()["resources"]['users']['/users/lookup']['remaining']
 
-        # if not self.unexploredIds:
-        #     self.collectUnexplored()
+        for _ in range(len(nodeList) // 100):
+            users = api.lookup_users(nodeList[0:100])
+            for user in users:
+                if user.id not in self.nodes:
+                    self.nodes.update({user.id: Node(user)})
+            nodeList = nodeList[100:]
 
-        if limit == -1:
-            limit = api.rate_limit_status()["resources"]['users']['/users/lookup']['remaining']
-
-        for _ in range(min([limit, len(self.leafNodes) // 100])):
-            users = api.lookup_users(self.leafNodes[0:100])
+            limit += -1
+            if limit == 0:
+                break
+        else: # This else is visited after the for finishes and when it doesnt encounter a 'break'
+            users = api.lookup_users(nodeList)
             for user in users:
                 self.nodes.update({user.id: Node(user)})
-            self.leafNodes = self.leafNodes[100:]
+
+    def listSearch_graph(self, api, depth=5):
+        """
+        Executes listSearch on all nodes in graph.nodes that have unrecorded friends.
+        Searching is ordered by insertion and stops when limit is zero or no further nodes need searching.
+
+        Usage: This combines what idSearch and mopSearch do in a single function, but is much worse, since its limited
+            to 20 users per call, where idSearch gets 5000 ids per call and mopSearch gets 100 users per call
+        Note: A maximum depth value of 5 is set by default
+
+        WARNING: This could create problems when used with other searching functions. Use
+        """
+        if not self.parentNodes:
+            self.parentNodes = list(self.iterator(True))
+
+        try:
+            while True:
+                node = self.nodes[self.parentNodes.pop(0)]
+                self.nodes.update(node.listSearch(api, depth=depth))
+        except IOError:
+            pass
+        except StopIteration:
+            pass
+        except IndexError:  # If parentNodes is empty, create it again
+            self.parentNodes = list(self.iterator(True))
 
     ###Edge Search Methods###
 

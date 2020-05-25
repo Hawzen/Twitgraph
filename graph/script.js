@@ -1,10 +1,10 @@
 // ### Initialize data JSON
-
 data.nodes = Object.fromEntries(Object.entries(data['nodes']));
 data.nodes[data.origin.json.id_str] = data.origin;
 
-let counter, current, id, node, index, origin,
- element, elements, originSettings, angle, clusters,
+let counter, counter2, current, id, node, index, origin, temp, name,
+ element, elements, originSettings, angle,
+clusters, cluster, clusterPoints, clusterSizes, fullSize, sizeLeft,
  box, infoBox, keepDetails, nodegraph, lights;
 
 // ### Initialize variables
@@ -12,12 +12,27 @@ let counter, current, id, node, index, origin,
 
 // # Initialize constants
 const nodeKeys = Object.keys(data.nodes);
-const numFriends = Object.keys(data.nodes).length - 1; // Dont count origin
 const info = document.getElementById("info");
-const nodeSize= 8/numFriends;
-const circleRule = 2*3.1415/numFriends;
-const maxProfiles = 5;
+const tau = 2*3.1415;
+const circleRule = tau/data.variables.numClusters;
 
+const constants = {
+    clusterStretch: 0.8,
+    ellipseStretch: {x: 1, y: 1},
+    nodeStretch: 0.06,
+
+    _edgeSize: 1,
+    _clusterSize: 1,
+    _nodeSize: 2,
+
+    // Maximum num of nodes in all cluster
+    maxCluster: Math.max.apply(Math, Object.values(data.variables.clusterSizes)), 
+    minNodeSize: 3,
+    maxNodeSize: 10,
+    minEdgeSize: 0.1,
+    maxEdgeSize: 10,
+    maxProfiles: 5,
+};
 
 // # Initialize colors
 let coloring = {
@@ -25,15 +40,24 @@ let coloring = {
 	inactive: "rgba(135, 121, 82, 0.2)",
 	active: "rgba(135, 121, 82, 1)",
 
-	origin: "#DC143C",
+    edgeColor: "rgba(135, 121, 82, 0.05)",
+    inactiveEdgeColor: "rgba(135, 121, 82, 0.03)",
+
+	origin: "#FFD700",
 	red: "#d7385e",
 
+    clusterActive: [230, 121, 82], //"rgba(230, 121, 82, 1)"
+    clusterInactive: "rgba(135, 121, 82, 0.2)",
+    clusterEdge: "rgba(200, 121, 100, 1)",
+    clusterInactiveEdge: "rgba(200, 121, 100, 0.3)",
+
 	background: "rgb(252, 241, 212)",
+    tBackground: "rgb(252, 230, 200, 0.3)",
 	box: "rgba(145, 132, 96, 0.2)",
 	boxText: "rgba(0, 0, 0, 0.95)"
 }
 document.getElementById("container").style["background-color"]= coloring.background;
-
+document.getElementById("miniMap").style["background-color"]= coloring.tBackground;
 
 // # Initialize infoBox
 infoBox = info.firstElementChild
@@ -41,50 +65,152 @@ infoBox.style["background-color"]= coloring.box;
 infoBox.style["color"]= coloring.boxText;
 
 
-// # Initialize origin 
-origin = data.origin
-originSettings = {
-	   id: origin.json.id_str,
-	   label: origin.json.name,
-	   x: 0,
-	   y: 0,
-	   size: nodeSize*2,
-	   color: coloring.origin
-	}
-
-
 // ### Graph components
 
 
 // # Graph arrays
-var g = {
+let g = {
     nodes: [],
     edges: []
 };
 
 
-// # Add cluster points 
-// map each clusterId to natural number starting from 1
-// clusterId = [23, 5, 23, 23, 1, 5, 23], clusters = {23: 1, 5: 2, 1: 3}
+// # Add cluster nodes 
+clusterPoints = {"": {x: 0, y: 0}};
+counter = 0;
 
-clusters = {} // {clusterId: cluster} 
-counter = 1
-for(cluster in data.variables.clusters){
-    if (clusters.hasOwnProperty(data.variables.clusters[cluster]))
-        continue;
-    clusters[data.variables.clusters[cluster]] = counter;
-    counter += 1;
+const point = function(angle, dependentPoint={x: 0, y: 0}, stretch) {
+    // Returns an object containing x, y position of a cluster given
+    // the angle property and parent node's x, y object
+    // if parent node's x, y object is not specified it'll be ignored
+    return {x: dependentPoint.x +  stretch * Math.sin(Math.random() * tau/2),
+            y: dependentPoint.y +  stretch * Math.cos(Math.random() * tau/2)};
+};
+
+const addClusterPoint = function (cluster, angle) {
+    // Given a cluster id and its angle 
+    // This function adds the cluster to clusterPoints object specifying its x, y position
+    // As well as every ancestor of that cluster
+    const parent = cluster.slice(0, cluster.length-1); // Get parent cluster
+    
+    if(cluster in clusterPoints){}
+
+    else if (parent in clusterPoints) // if parent is already in clusterPoints
+        if(parent === "")
+            clusterPoints[cluster] = point(angle, clusterPoints[parent], 0.3);    
+        else
+            // Create object relying on parent position
+            clusterPoints[cluster] = point(angle, clusterPoints[parent], Math.max(5/getNumDigits(cluster), 1)); 
+
+    else{
+        // When parent is not in clusterPoints and cluster isnt single digit
+        addClusterPoint(parent, angle); // Recursively apply function to parent
+
+        // After that create cluster point relying on parent node
+        clusterPoints[cluster] = point(angle, clusterPoints[parent], Math.max(5/getNumDigits(cluster), 1)); 
+    }
+};
+
+const addNode = function(cluster){
+    // Given a cluster id, adds it to g.nodes
+    // Note: cluster should be in clusterPoints 
+    if(g.nodes.some(x => x.id == "c" + cluster )) // check if exists already
+        return;
+
+    let name = "";
+    let hidden = false;
+    let size = 0.001;
+
+    if(data.variables.clusters.some(x => cluster == x)){
+        loop1: // Get name from cluster's children, assign as label
+        for(node in data.nodes)
+            if(data.nodes[node].cluster == cluster){
+                name = data.nodes[node].json.name;
+                break loop1;
+            }
+        hidden = false;
+        size = data.variables.clusterSizes[cluster]/constants.maxCluster * constants._clusterSize;
+    }
+
+    g.nodes.push({
+    id: "c" + cluster,
+    label: name,
+    x: clusterPoints[cluster].x,
+    y: clusterPoints[cluster].y,
+    size: size,
+    color: clusterColor(cluster), 
+    hidden: hidden
+    });    
 }
 
-// Construct origin point for each cluster, where points are uniformly distributed along an ellipse
-const ellipseRule = 2*3.1415/(counter - 2);
-clusterPoints = {0: {x: 0, y: 0}};
-counter = 0;
-for(key in clusters){
-    angle = ellipseRule * counter;
-    clusterPoints[key] = {x: Math.sin(angle), y: Math.cos(angle)};
 
+// Add all clusters to clusterPoints
+for(key in data.variables.clusters){
+    cluster = data.variables.clusters[key]
+
+    angle = counter * circleRule;
     counter += 1;
+
+    loopWhile:
+    while(true){
+        addClusterPoint(cluster, angle);
+        cluster = cluster.slice(0, cluster.length-1);
+        if(cluster === "")
+            break loopWhile;
+    }
+}
+
+
+// Add all clusters to g.nodes
+for(key in data.variables.clusters){
+    cluster = data.variables.clusters[key];
+
+    loopWhile:
+    while(true){
+        addNode(cluster);
+        cluster = cluster.slice(0, cluster.length-1);
+        if(cluster == "")
+            break loopWhile
+    }
+}
+
+// Add cluster edges
+
+const getClusterEdge = function(cluster) {
+    while(true){
+        cluster = cluster.slice(0, cluster.length-1);;
+        if (cluster == "")   return null
+        if (g.nodes.some(x => x.id == "c" + cluster))
+            return cluster
+    }
+}
+
+let check = [];
+for(key in data.variables.clusters){
+    cluster = data.variables.clusters[key];
+    
+    whileLoop:
+    while(true){
+        const prev = getClusterEdge(cluster);
+
+        if (prev != null){
+            g.edges.push({
+                id: "e_c" + cluster + "_c" + prev,
+                source: "c" + cluster,
+                target: "c" + prev,
+                size: constants._edgeSize * 4,
+                color: coloring.clusterEdge,
+                type: "dashed"
+            })
+        }
+
+        cluster = cluster.slice(0, cluster.length-1);
+        while(check.some(x => x == cluster))
+            cluster = cluster.slice(0, cluster.length-1);
+        if(cluster === "")
+            break whileLoop;
+        check.push(cluster)
+    }
 }
 
 
@@ -93,24 +219,47 @@ for(key in clusters){
 //  with the cluster they're in
 // see https://en.wikipedia.org/wiki/Polar_coordinate_system
 
+
+// Copy cluster sizes and use as a reference to place evenly spaces nodes in a circle around every cluster where
+// data.variables.clusterSizes is unchanged and stores sizes, and clusterSizes is changed and stores nodes left in cluster
+clusterSizes = Object.assign({}, data.variables.clusterSizes)
 counter = 1;
 for (node in data.nodes){
     current = data.nodes[node];
-    angle = circleRule * counter;
+
+    fullSize = data.variables.clusterSizes[current.cluster];
+    sizeLeft = clusterSizes[current.cluster];
+    angle = tau/fullSize * (fullSize - sizeLeft);
     counter++;
 
     g.nodes.push({
         id: current.json.id_str,
         label: current.json.name,
-        x: clusterPoints[current.cluster].x - Math.random()/5,
-        y: clusterPoints[current.cluster].y - Math.random()/5,
-        size: nodeSize,
-        color: coloring.active
+        x: clusterPoints[current.cluster].x + Math.sin(angle) * constants.nodeStretch,
+        y: clusterPoints[current.cluster].y + Math.cos(angle) * constants.nodeStretch,
+        size: data.variables.clusterSizes[current.cluster]/constants.maxCluster * 
+                                constants._clusterSize * constants._nodeSize / 5,
+        color: coloring.active,
     });
+    clusterSizes[current.cluster] += -1
 }
 
 
-// # Modify origin Node
+// # Add origin Node
+
+origin = data.origin;
+fullSize = data.variables.clusterSizes[origin.cluster];
+sizeLeft = clusterSizes[origin.cluster];
+angle = tau/fullSize * (fullSize - sizeLeft);
+originSettings = {
+    id: origin.json.id_str,
+    label: origin.json.name,
+    x: clusterPoints[origin.cluster].x + Math.sin(angle) * constants.nodeStretch,
+    y: clusterPoints[origin.cluster].y + Math.cos(angle) * constants.nodeStretch,
+    size: data.variables.clusterSizes[current.cluster]/constants.maxCluster * 
+                            constants._clusterSize * constants._nodeSize / 5,
+    color: coloring.origin
+    }
 
 index = g.nodes.findIndex(node => node.id == origin.json.id_str);
 g.nodes[index] = originSettings;
@@ -130,11 +279,11 @@ for (node in data.nodes) {
                 id: "e_" + current.json.id_str + "_" + counter,
                 source: current.json.id_str,
                 target: id,
-                size: 0.05,
-                color: coloring.active,
-                type: "cruve",
+                size: constants._edgeSize,
+                color: coloring.edgeColor,
+                type: "cruve"
             });
-            counter++;
+        counter++;
         }
     }
 }
@@ -144,52 +293,88 @@ for (node in data.nodes) {
 
 // # Function variables
 
-let iamge, header, description
+let image, header, description;
 let stack = []; // How many profile details are displayed
-
+let result;
 
 // # Functions
-
-function getNodeFromId(id){
-    return data.nodes.find(node => node.id_str == id);
-}
-
-function displayDetails(node, append=false){
+function displayDetails(id, append=false){
     /* Displays the details of the node given */
 
-	if(stack.length == maxProfiles && append) 
+    if (id.includes("c")) // If clicked node is a cluster
+        if(!data.variables.clusters.includes(id.slice(1))){ // if cluster doesnt have nodes then ignore it
+            console.log(id.slice(1))
+            return;
+        }
+        else
+            result = clusterDetails(id); 
+    else
+        result = profileDetails(data.nodes[id]);
+
+    if (result == -1)
+        return;
+
+	if(stack.length == constants.maxProfiles && append)
 		return; // if at max and trying to append
-
-	if (stack.includes(node.json.id_str))
-		return; // if node already in box
-	else
-		stack.push(node.json.id_str)
-
-	image = `<img src=${node.json.profile_image_url}>`;
-
-    header = `<h3 style="text-align:center;">
-    		<a href=https://twitter.com/${node.json.screen_name}>${node.json.name}</a><br>
-            ${node.json.friends_count} Following&emsp;
-            ${node.json.followers_count} Followers<br><hr style="width:50%;">`;
-
-    description = `${node.json.description}<br><hr style="width:50%;">
-    					Tweet count: ${node.json.statuses_count}&emsp;
-    					Favorite count: ${node.json.favourites_count}<br>
-    					<a href=${node.json.url}>Link</a>&emsp;
-    					Location: ${node.json.location}</h3>`;
 
     if (append){
     	element = document.createElement("div.infoBox");
-    	element.innerHTML = image + header + description;
-    	element.style = infoBox.style;
-
-    	element.style["background-color"]= coloring.box;
-    	element.style["color"]= coloring.boxText;
+    	element.innerHTML = result;
+    	//element.style = infoBox.style;
+        
 
     	infoBox.appendChild(element)
     }
     else
-    	infoBox.innerHTML = image + header + description;
+    	infoBox.innerHTML = result;
+}
+
+function profileDetails(node){
+    if (stack.includes(node.json.id_str))
+        return -1; // if node already in box
+    else
+        stack.push(node.json.id_str)
+
+    image = `<img style="position: absolute" src=${node.json.profile_image_url}>`;
+
+    header = `<h3 style="text-align:center;">
+            <a href=https://twitter.com/${node.json.screen_name}>${node.json.name}</a><br>
+            ${node.json.friends_count} Following&emsp;
+            ${node.json.followers_count} Followers<br><hr style="width:50%;">`;
+
+    description = `${node.json.description}<br><hr style="width:50%;">
+                        Tweet count: ${node.json.statuses_count}&emsp;
+                        Favorite count: ${node.json.favourites_count}<br>
+                        <a href=${node.json.url}>Link</a>&emsp;
+                        Location: ${node.json.location}</h3>`;
+
+    return image + header + description;
+}
+
+function clusterDetails(cluster){
+    let nodesNum = 0;
+    let tweetCount = 0;
+    let favCount = 0;
+    let imgs = "";
+    let names = [];
+
+    for(node in data.nodes){
+        node = data.nodes[node]
+        if(cluster.slice(1) != node.cluster)
+            continue;
+
+        nodesNum += 1;
+        tweetCount += node.json.statuses_count;
+        favCount += node.json.favourites_count;
+        imgs += ` <img style="position: relative" src= ${node.json.profile_image_url} > `;
+        names.push("&emsp;" + node.json.name);
+        
+    }
+    header = `<h3 style="text-align:center;"> ${names[0]}'s Cluster<br>
+              Number Of nodes: ${nodesNum}&emsp; Tweet Count: ${tweetCount}&emsp; Favorite Count: ${favCount}
+              <br><hr style="width:50%;">${names}<hr style="width:50%;">`;
+    description = imgs;
+    return header + imgs + "</h3>"
 }
 
 function clearDetails(){
@@ -206,6 +391,9 @@ function clearDetails(){
 function colorNodes(color, active=false){
     /* Returns all nodes to their original color */
 	for(node in nodes){
+        if (nodes[node].id.includes("c"))  
+            continue;
+
 		nodes[node].active = active;
 		nodes[node].color = color;
 		if (nodes[node].id == origin.json.id_str) // if origin, then origin color
@@ -214,11 +402,15 @@ function colorNodes(color, active=false){
 	s.render();
 }
 
-function markNodes(node, onColor, offColor, ctrlKey){
+function markNodes(id, onColor, offColor, ctrlKey){
     /* Colors all nodes depending on many factors 
     TODO: Change this to be more efficient*/
 	for(node in nodes){
-		if (nodes[node].active && ctrlKey || nodegraph.id == nodes[node].id){
+
+        if (nodes[node].id.includes("c"))  
+            continue;
+
+		if (nodes[node].active && ctrlKey || id == nodes[node].id){
 			nodes[node].color = onColor;
 			if (nodes[node].id == origin.json.id_str) // if origin, then origin color
 				nodes[node].color = coloring.origin;
@@ -235,55 +427,95 @@ function markNodes(node, onColor, offColor, ctrlKey){
 function colorEdges(color){
     /* Returns all edges to their original color, and size*/
 	for(let edge in edges){
-		edges[edge].color = color
-		edges[edge]["read_cam0:size"] = 1;
+        if (edges[edge].id.includes("c"))
+            edges[edge].color = coloring.clusterEdge;
+        else{
+    		edges[edge].color = color;
+    		edges[edge].size = 1;
+        }
 	}
-	s.render();
+	s.refresh();
 }
 
-function markEdges(node, onColor, offColor, ctrlKey=false){
+function markEdges(id, onColor, offColor, ctrlKey=false){
     /* Colors all edges that connect to node with onColor and other thing
     TODO: remove the else in func and run colorEdges rather than it*/
-	for(let edge in edges){	
-        if(edges[edge].id.includes(node.json.id_str)){
+	for(let edge in edges){
+
+        if(edges[edge].id.includes("c")){
+            edges[edge].color = coloring.clusterInactiveEdge;
+            continue;
+        }
+
+        else if(edges[edge].id.includes(id)){
             edges[edge].color = onColor;
             edges[edge].active = true;
-            edges[edge]["read_cam0:size"] = 5;
+            edges[edge].size = constants._edgeSize * 4;
         }
+
         else if (ctrlKey && edges[edge].active){} // Skip when user holds ctrlKey and edge already active
+
         else {
         	edges[edge].color = offColor;
-        	// edges[edge].active = false; // Why is this not needed?
-        	edges[edge]["read_cam0:size"] = 1;
+        	edges[edge].active = false; // Why is this not needed? TODO DELETE it
+        	edges[edge].size = constants._edgeSize;
         	
         }
     }
-    s.render();
+    s.refresh();
 }
 
 // ### Sigmajs
-
-var s = new sigma({
+let s = new sigma({
     graph: g,
-    renderer: {
-        container: document.getElementById('container'),
-        type: 'canvas',
-        settings: {
-            minNodeSize: 0.1,
-            maxNodeSize: 100,
-            minEdgeSize: 0.01,
-            maxEdgeSize: 1,
-            enableEdgeHovering: true,
-            edgeHoverSizeRatio: 2,
-            doubleClickEnabled: false
-        }
+    settings: {
+        minNodeSize: constants.minNodeSize,
+        maxNodeSize: constants.maxNodeSize,
+        minEdgeSize: constants.minEdgeSize,
+        maxEdgeSize: constants.maxEdgeSize,
+
+        zoomMin: 0.001,
+        zoomMax: 5,
+        zoomingRatio: 3,
+
+        verbose: true,
+        scalingMode: "outside"
+    },
+});
+
+s.addCamera("main");
+s.addCamera("miniCam");
+
+s.addRenderer({
+    container: document.getElementById('container'),
+    type: 'canvas',
+    camera: "main",
+    settings: {
+        doubleClickEnabled: false,
+
+        edgeHoverSizeRatio: 2,
+        hideEdgesOnMove: true,
+
+        labelThreshold: 7,
+        font: "monospace",
     }
 });
 
+s.addRenderer({
+    container: document.getElementById("miniMap"),
+    type: "canvas",
+    camera: "miniCam",
+    settings: {
+        drawEdges: false,
+        drawLabels: false,
+        mouseEnabled: false
+    }
+});
+
+s.refresh();
 
 // # Graph variables
 // Modify these to modify graph
-
 const edges = s.graph.edges();
 const nodes = s.graph.nodes();
 for(node in nodes)
@@ -294,13 +526,11 @@ for(node in nodes)
 
 
 // # Events variables
-
 lights = true; // When this is off, clickNode shouldnt modify edges
 keepDetails = false; // When this is on, outNode shouldnt modify DIV details
 
 
 // # Events
-
 s.bind("overNode", function(e){
     /* Displays details when cursor over node */
 	nodegraph = e.data.node; // Node from sigmajs's pov, use to modify behavior
@@ -308,7 +538,7 @@ s.bind("overNode", function(e){
 	nodegraph.active = true;
 
 	if(!keepDetails)
-    	displayDetails(current);
+    	displayDetails(nodegraph.id);
 })
 
 s.bind("outNode", function(e){
@@ -323,24 +553,27 @@ s.bind('clickNode', function(e) {
      isn't nullified by outNode event, but the latter removes details when outNode activates*/
 	nodegraph = e.data.node;  
     current = data.nodes[nodegraph.id];  
+
 	nodegraph.active = true;
 	keepDetails = true;
 
-    displayDetails(current, e.data.captor.ctrlKey);
-    if (lights) 
-    	markEdges(current, coloring.red, coloring.active, e.data.captor.ctrlKey);
+    
+    if (lights) {
+        displayDetails(nodegraph.id, e.data.captor.ctrlKey);
+    	//markEdges(current, coloring.red, coloring.inactiveEdgeColor, e.data.captor.ctrlKey);
+    }
 });
 
 s.bind("doubleClickNode", function(e) {
     /* Displays details in the same way clickNode behaves, and changes the colors to a lights-out mode */
 	nodegraph = e.data.node;  
-    current = data.nodes[nodegraph.id];  
+
 	nodegraph.active = true;
 	lights = false
 
-    if (!lights)
-    	markEdges(current, coloring.red, coloring.inactive, e.data.captor.ctrlKey);
-	markNodes(current, coloring.active, coloring.inactive, e.data.captor.ctrlKey);
+    displayDetails(nodegraph.id, e.data.captor.ctrlKey);
+    markEdges(nodegraph.id, coloring.red, coloring.inactiveEdgeColor, e.data.captor.ctrlKey);
+	markNodes(nodegraph.id, coloring.active, coloring.inactive, e.data.captor.ctrlKey);
 })
 
 s.bind('doubleClickStage', function(e) {
@@ -348,15 +581,31 @@ s.bind('doubleClickStage', function(e) {
 	keepDetails = false;
 	lights = true;
 
-    colorEdges(coloring.active);
+    colorEdges(coloring.edgeColor);
     colorNodes(coloring.active);
 	clearDetails()
 });
 
-// overEdge outEdge clickEdge doubleClickEdge rightClickEdge clickStage overNode outNode
-
 
 // ### Extras
+
+// Get color function
+function clusterColor(cluster){
+    // Determines color of cluster based on cluster ID 
+    let c = coloring.clusterActive;
+    let sum = getNumDigits(cluster);
+    return `rgba(${c[0]}, ${c[1] * sum / 10}, ${c[2] * sum / 10}, 1)`
+}
+
+function getNumDigits(num){
+    let str = String(num);
+    let sum = 0;
+    while(str){
+        sum += 1;
+        str = str.slice(0, str.length-1);
+    }
+    return sum;
+}
 
 function checknode(nodeId){ // Checking, not used 
     return nodes.some(x => Array(data.nodes[nodeId].edges).includes(x.id));
