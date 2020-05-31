@@ -2,37 +2,37 @@ from saving_and_loading import *
 from time import sleep
 
 # screenName = input("Enter a twitter handle to be searched:\t")
-
-
-screenName = "graph"
+screenName = "_KSU"
 api, graph = loadAll(screenName)
 
 minutes = 15
 enumerations = 80
+
 sve = True if input("Save data? (y/n) ") == "y" else False
+graph.listSearch_graph(api, depth=99)
+for i in range(enumerations):
+    print(f"\nFAfter Lst Search.\n\tTotal number of nodes: {graph.getNodeNum()}\
+                                \n\tTotal number of done nodes: {graph.getDoneNum()}\n")
 
-a = list(graph.iterator2())
-a2 = list(graph.iterator(False))
-pass
-pass
-pass
-print(a)
-# graph.listSearch_graph(api)
-# graph.idSearch_graph(api)
-# graph.mopSearch(api)
+    graph.idSearch_graph(api)
+    print(f"\nFAfter Id Search.\n\tTotal number of nodes: {graph.getNodeNum()}\
+                                \n\tTotal number of done nodes: {graph.getDoneNum()}\n")
 
-# for i in range(enumerations):
-#     # graph.listSearch_graph(api)
-#     graph.idSearch_graph(api)
-#     graph.mopSearch(api)
-#
-#     saveShelve(screenName, graph, dumb=sve, onlyDone=True, checkEdges=True, checkClusters=True, numPartitions=10)
-#
-#     for minute in range(15):
-#         s = "\r░ MINUTES UNTIL NEXT BATCH\t{:>02}".format(15 - minute)
-#         print(s, end=" ")
-#         sleep(60)
-#     sleep(15)
+    # if graph.getNodeNum() - graph.getDoneNum() <= 15:
+    #     graph.mopSearch(api)
+
+    saveShelve(screenName, graph, dumb=sve, onlyDone=True, numPartitions=50)
+    finished = list(node.id for node in graph.nodes.values() if any(node.done))
+    with open("logs.txt", 'a') as file:
+        file.write(str(finished))
+
+    print(f"\nFinished {i + 1} iteration.\n\tTotal number of nodes: {graph.getNodeNum()}\
+                                \n\tTotal number of done nodes: {graph.getDoneNum()}\n")
+    for minute in range(15):
+        print("\r░ MINUTES UNTIL NEXT BATCH\t{:>02}".format(15 - minute), end=" ")
+        sleep(60)
+    sleep(15)
+    print("\r░ MINUTES UNTIL NEXT BATCH\t{:>02}".format(0), end=" ")
 
 ### Data
 # X TODO: Check cluster splitting if works
@@ -65,13 +65,5 @@ print(a)
 
 # graph.display()
 
-# for node in graph.nodes.values():
-#     if len(node.friendsIds) == 0:
-#         node.done = (False, False)
-#     else:
-#         node.done = (True, False)
-# graph.collectUnexplored()
 
-# sve = True if input("Save data? (y/n) ") == "y" else False
-# graph.listSearch_graph(api)
-# saveShelve(screenName, graph, dumb=sve, onlyDone=True, checkEdges=True, checkClusters=True, numNodes=0, numPartitions=25)
+saveShelve(screenName, graph, dumb=sve, onlyDone=True, numNodes=0, numPartitions=50)

@@ -1,7 +1,11 @@
 # Spectral clustering
-# Reference: https://people.eecs.berkeley.edu/~demmel/cs267/lecture20/lecture20.html
+# Reference: https://arxiv.org/abs/0711.0189
+#            https://people.eecs.berkeley.edu/~demmel/cs267/lecture20/lecture20.html
 import numpy as np
 from itertools import compress, groupby
+from sklearn.cluster import spectral_clustering
+from warnings import filterwarnings
+filterwarnings("ignore", "Graph is not fully connected, spectral embedding")
 
 
 def getClusters(nodes: dict, numPartitions: int = 2) -> dict:
@@ -21,22 +25,30 @@ def getClusters(nodes: dict, numPartitions: int = 2) -> dict:
                      1 -> belongs to the first cluster
                      211 -> belongs to the second cluster, the first sub cluster and the first sub-sub cluster"""
 
-    clusters = [] # Clusters is a python list to allow variable length integers
+    nodesToClusters = {}
+    for node in nodes.values():
+        if node.user.protected:
+            nodesToClusters[node.id] = 4
+
+    for Id in nodesToClusters.keys():
+        nodes.pop(Id)
+
+    clusters = []  # Clusters is a python list to allow variable length integers
 
     for i in range(numPartitions - 1):
         if i == 0:
-            clusters = list(getEigenvec(createLaplacian(createAdjacency(nodes))))
+            clusters = list((spectral(createAdjacency(nodes))))
             continue
 
         # Sort then group clusters by num. of members
-        frequency = {key: len(tuple(group)) for key, group in groupby(sorted(clusters))}
+        frequency = {key: len(tuple(group)) for key, group in groupby(sorted(clusters)) if "5" not in str(key)}
         maximum = max(frequency.values())
         for key, freq in frequency.items():
             if freq == maximum:
-                cluster = key # Use 'cluster' to select biggest cluster
+                cluster = key  # Use 'cluster' to select biggest cluster
 
         # Split nodes that belong to 'cluster' into two clusters
-        vec = getEigenvec(createLaplacian(createAdjacency(nodes, tuple(cluster == x for x in clusters))))
+        vec = (spectral(createAdjacency(nodes, tuple(cluster == x for x in clusters))))
 
         # Update all new clustered elements from vec to clusters
         cnt = 0
@@ -45,10 +57,9 @@ def getClusters(nodes: dict, numPartitions: int = 2) -> dict:
                 clusters[index] = int(str(clusters[index]) + str(vec[cnt]))
                 cnt += 1
 
-    out = {}
     for Id, cluster in zip(nodes, clusters):
-        out.update({Id: int(cluster)})
-    return out
+        nodesToClusters.update({Id: int(cluster)})
+    return nodesToClusters
 
 
 def createAdjacency(nodes: dict, selectors: tuple = None) -> np.ndarray:
@@ -67,19 +78,21 @@ def createAdjacency(nodes: dict, selectors: tuple = None) -> np.ndarray:
     if selectors is None:
         selectors = (True,) * len(nodes)
 
-    compressed = tuple(compress(nodes.items(), selectors)) # Throw out any nodes not specified in selectors
+    compressed = tuple(compress(nodes.items(), selectors))  # Throw out any nodes not specified in selectors
     A = []
     for _, node in compressed:
-
-        # # Weighting graphs (isn't very useful in detecting good clusters)
-        # A.append([])
-        # for Id, _ in compressed:
-        #     num = (node.user.followers_count + nodes[Id].user.followers_count)
-        #     num = 50 if num < 100 else 3 if num < 1000 else 1
-        #     A[-1].append(num)
         A.append(list(1 if Id in node.edges or node.id in nodes[Id].edges else 0 for Id, _ in compressed))
-
     return np.array(A)
+
+
+def spectral(A):
+    labels = spectral_clustering(A, 2)
+    for i, el in enumerate(labels):
+        if el == 0:
+            labels[i] = 1
+        elif el == 1:
+            labels[i] = 2
+    return labels
 
 
 def createLaplacian(A: np.ndarray) -> np.ndarray:
@@ -99,9 +112,13 @@ def getEigenvec(L: np.ndarray) -> np.ndarray:
     vals, vecs = np.linalg.eigh(L)
 
     # Get eigenvector associated with the second eigenvalue
-    index = np.where(vals == np.partition(vals, 1)[1])[0][0]
+    index = np.where(vals > 10e-6)[0][0]
     vec = vecs[:, index]
 
+    # If      vec[i] > 0 -> vec[i] belongs to cluster 1
+    # Else if vec[i] < 0 -> vec[i] belongs to cluster 2
+    # This heuristic could be improved by applying K-Means to vec which should provide better clusters, but we will
+    # refrain from applying it
     temp = np.zeros(len(vec), dtype=np.int64)
     for i, el in enumerate(vec):
         if el < 0:
@@ -109,6 +126,34 @@ def getEigenvec(L: np.ndarray) -> np.ndarray:
         elif el > 0:
             temp[i] = 2
         elif el == 0:
-            temp[i] = 5 # The number is a completely arbitrary choice, read 'Note' in function docstring
+            temp[i] = 5  # The number is an arbitrary choice, read 'Note' in function docstring
 
     return temp
+
+
+"""
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans, spectral_clustering
+
+crnt = 0
+
+    x = KMeans(2).fit(np.reshape(vec, (-1, 1)))
+    with open("log\gext.txt", "a") as file:
+        file.write(str(x.labels_))
+        file.write("\n")
+
+    labels = x.labels_
+    for i, el in enumerate(labels):
+        if el == 0:
+            labels[i] = 1
+        elif el == 1:
+            labels[i] = 2
+
+    # global crnt
+    # fig, axes = plt.subplots(3, 3)
+    # for vect, axis in zip(vecs, np.reshape(axes, 9)):
+    #     axis.scatter(vect, [0] * len(vec))
+    # fig.savefig("pics\{}_{}_{}.png".format(len(vec), vals[index], crnt))
+    # crnt += 1
+    # plt.clf()
+"""

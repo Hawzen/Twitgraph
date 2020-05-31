@@ -58,16 +58,8 @@ class Node:
 
 class Graph:
     def __init__(self):
-        self.nodeNum = 0
-        self.doneNum = 0
-
         self.origin = None
         self.nodes = {}  # {id : Node}
-        self.leafNodes = []  # Ids of every leaf node in self.nodes
-        self.parentNodes = []  # Ids of parents of every leaf node in self.nodes
-
-        self.unexploredIds = set()  # Set of ids connected to nodes in self.nodes but yet to be added to self.nodes
-        self.friendlessIds = set()  # Set of ids of nodes that have length zero of the node.friendsIds set
 
     def setOrigin(self, api, userName):
         self.origin = Node(api.get_user(userName))
@@ -79,89 +71,47 @@ class Graph:
         return tuple(node.id for node in self.nodes.values() if Id in node.edges)
 
     def collectUnexplored(self):
-        """Collects the union set of friendsIds in all nodes in self.nodes and stores them in self.unexploredIds"""
+        """Returns the union set of friendsIds that are not in self.nodes"""
+        unexploredIds = set()
         for node in self.nodes.values():
             if any(node.done):
                 s = set(Id for Id in node.friendsIds if Id not in self.nodes.keys())
                 if len(s) == 0:
                     node.done = (True, True)
                 else:
-                    self.unexploredIds.update(s)
+                    unexploredIds.update(s)
                 # self.unexploredIds = self.unexploredIds.union(temp)
-        return self.unexploredIds
+        return unexploredIds
 
     def collectFriendless(self):
-        """NOTE: CONSIDERS 0 FRIENDS AS FRIENDLESS"""
+        """Returns set of ids who have an empty node.friendsIds"""
         return set(node.id for node in self.nodes.values() if len(node.friendsIds) == 0)
 
     def getNodeNum(self):
-        self.nodeNum = len(self.nodes)
-        return self.nodeNum
+        return len(self.nodes)
 
     def getDoneNum(self):
-        self.doneNum = sum(1 for node in self.nodes.values() if any(node.done))
-        return self.doneNum
+        return sum(1 for node in self.nodes.values() if any(node.done))
 
     ###Searching Methods###
 
-    def searchCost(self, ID: int):
-        """Return number of friends of node of id ID
-           Return -1 for nodes not in self.nodes
-           Note: Be careful of inputting nodes that don't have their friendsIds set filled, they will always return 0"""
-        if ID in self.nodes.keys():
-            return len(self.nodes[ID].friendsIds)
-
+    def searchCost(self, Id: int):
+        """Returns number of friends of node of id ID
+           Returns -1 if Id not in self.nodes"""
+        if Id in self.nodes.keys():
+            return len(self.nodes[Id].friendsIds)
         return -1
 
     def getFriends(self, node: Node):
         """Return all friends of node that are in self.nodes in a set"""
         return set(friend[1] for friend in self.nodes.items() if friend[0] in node.friendsIds)
 
-    def iterator(self, internal):  # FIXME Redo using breadth first search
-        """
-        When internal == False
-        Return iterator over all leaf nodes
-
-        Otherwise return an iterator over all unique parents of leaf nodes
-        Note: The second case does not work when the level of the graph is less than 3
-        """
-        current = self.origin.id  # Current is the current working node id
-        path = [current]  # Stack to keep track of current path
-        done = set()  # Set to keep track of which nodes already yielded
-        while True:
-
-            # While current is internal and there are internal nodes connected to it that arent in done
-            while current in self.nodes and \
-                    any(ID in self.nodes for ID in self.nodes[current].friendsIds if ID not in done and ID not in path):
-
-                # Add current to path if isn't the last element
-                if current != path[-1]: path.append(current)  # FIXME
-
-                # Get all friendsIds except when done or when already passed
-                friends = set(ID for ID in self.nodes[current].friendsIds if ID not in done and ID not in path)
-
-                # Gives off 0 if node.friendsIds is not updated
-                current = min(friends, key=self.searchCost)
-
-            done.add(current)
-            if current not in self.nodes:  # If current is leaf node, i.e. not searched
-                if internal:
-                    current = path[-1]
-                    done.add(current)
-                    yield current  # Get internal node id
-                else:
-                    yield current  # Get leaf node id
-
-            if all(node in done for node in self.origin.friendsIds):
-                raise StopIteration
-            if current == path[-1]: path.pop()  # FIXME
-            current = path[-1]
-
-    def iterator2(self):
+    def getLeafIds(self):
+        """Breadth first search generator for nodes that aren't in self.nodes"""
         visited = {Id: False for Id in self.nodes}
         stack = [self.origin.id]
 
-        yielded = set()
+        yielded = set() # Houses yielded leaf nodes
 
         while stack:
             current = stack.pop()
@@ -169,19 +119,44 @@ class Graph:
 
             for Id in self.nodes[current].friendsIds:
                 if Id in self.nodes:
-                    if not visited[Id] and Id not in stack:
+                    if not visited[Id] and Id not in stack and any(self.nodes[Id].done):
                         stack.append(Id)
                 else:
                     if Id not in yielded:
                         yielded.add(Id)
                         yield Id
 
+    def getInternalIds(self):
+        """Breadth first search generator for nodes that are in self.nodes and aren't done (not any(node.done))"""
+        visited = {Id: False for Id in self.nodes}
+        stack = [self.origin.id]
+
+        done = set() # Houses yielded internal nodes, as well as leaf nodes connected to them
+
+        while stack:
+            current = stack.pop()
+            visited[current] = True
+
+            if not any(self.nodes[current].done):
+                yield current
+
+            for Id in self.nodes[current].friendsIds:
+                if Id in self.nodes:
+                    if not visited[Id] and Id not in stack:
+                        stack.append(Id)
+                else:
+                    if Id not in done:
+                        if current not in done:
+                            done.add(current)
+                            yield current
+                        done.add(Id)
+
     def idSearch_graph(self, api):
         """
         Gets friends ids of nodes if they aren't stored already, and stores them in the node's
-        node.friendsIds set.
+        node.friendsIds set. And also changes the node's 'done' tuple
 
-        Usage: Use this to quickly get many ids of related nodes. This is better used before mopSearch and listSearch
+        Usage: Use this to quickly get many ids of related nodes.
         Note: This method gets 5000 ids per user
         """
         limit = api.rate_limit_status()["resources"]['friends']["/friends/ids"]["remaining"]
@@ -201,10 +176,11 @@ class Graph:
     def mopSearch(self, api):
         """ Gets friends of users and adds them to self.nodes"""
         # nodeList = list(self.collectUnexplored())  # Look up these nodes
-        if not self.leafNodes:
-            self.leafNodes = list(self.iterator(False))
-        nodeList = self.leafNodes
+        nodeList = list(self.getLeafIds())
         limit = api.rate_limit_status()["resources"]['users']['/users/lookup']['remaining']
+
+        if len(nodeList) == 0:
+            return
 
         for _ in range(len(nodeList) // 100):
             users = api.lookup_users(nodeList[0:100])
@@ -214,7 +190,7 @@ class Graph:
             nodeList = nodeList[100:]
 
             limit += -1
-            if limit == 0:
+            if limit == 1:
                 break
         else: # This else is visited after the for finishes and when it doesnt encounter a 'break'
             users = api.lookup_users(nodeList)
@@ -229,34 +205,24 @@ class Graph:
         Usage: This combines what idSearch and mopSearch do in a single function, but is much worse, since its limited
             to 20 users per call, where idSearch gets 5000 ids per call and mopSearch gets 100 users per call
         Note: A maximum depth value of 5 is set by default
-
-        WARNING: This could create problems when used with other searching functions. Use
         """
-        if not self.parentNodes:
-            self.parentNodes = list(self.iterator(True))
+        nodeList = list(self.getInternalIds())
 
         try:
             while True:
-                node = self.nodes[self.parentNodes.pop(0)]
+                node = self.nodes[nodeList.pop(0)]
                 self.nodes.update(node.listSearch(api, depth=depth))
-        except IOError:
+        except (IOError, StopIteration, IndexError):
             pass
-        except StopIteration:
-            pass
-        except IndexError:  # If parentNodes is empty, create it again
-            self.parentNodes = list(self.iterator(True))
 
     ###Edge Search Methods###
 
-    def edgeSearch(self, node: Node, nodesSet=None):
+    def edgeSearch(self, node: Node, nodesSet: set):
         """Gets the intersection of given 'node' with self.nodes and stores them in node's edges set"""
-        if nodesSet is None:
-            nodesSet = set(self.nodes)
-
         node.edges = nodesSet.intersection(node.friendsIds)
 
     def fullEdgeSearch(self, numNodes):
-        """Repeats for all nodes when numNodes == 0"""
+        """Executes edgeSearch numNodes number of nodes for nodes in self.nodes"""
         nodesSet = set(self.nodes)
         for i, node in enumerate(self.nodes.values()):
             self.edgeSearch(node, nodesSet)
@@ -268,7 +234,7 @@ class Graph:
 
     def printFriends(self, node: Node, indent=0, depth=9):
         if not node.edges:
-            self.edgeSearch(node)
+            self.edgeSearch(node, set(self.nodes))
         crntIndent = " " * indent
         full = f"{node.user.screen_name}:\t[{len(node.friendsIds)} Friends]\t[{len(node.edges)} Mutual Friends]\n"
         partial = ""

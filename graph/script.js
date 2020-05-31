@@ -4,8 +4,8 @@ data.nodes[data.origin.json.id_str] = data.origin;
 
 let counter, counter2, current, id, node, index, origin, temp, name,
  element, elements, originSettings, angle,
-clusters, cluster, clusterPoints, clusterSizes, fullSize, sizeLeft,
- box, infoBox, keepDetails, nodegraph, lights;
+ clusters, cluster, clusterPoints, clusterSizes, fullSize, sizeLeft,
+ box, infoBox, keepDetails, nodegraph, lights, scalingMode;
 
 // ### Initialize variables
 
@@ -13,51 +13,22 @@ clusters, cluster, clusterPoints, clusterSizes, fullSize, sizeLeft,
 // # Initialize constants
 const nodeKeys = Object.keys(data.nodes);
 const info = document.getElementById("info");
-const tau = 2*3.1415;
-const circleRule = tau/data.variables.numClusters;
+const tau = 2*Math.PI;
+const maxCluster = Math.max.apply(Math, Object.values(data.variables.clusterSizes))
+if (nodeKeys.length > 100)
+    scalingMode = "outside";
+else
+    scalingMode = "inside";
 
-const constants = {
-    clusterStretch: 0.8,
-    ellipseStretch: {x: 1, y: 1},
-    nodeStretch: 0.06,
+// # Load config settings
+const mode = config.mode;
+const constants = config.constants;
+let coloring = config.coloring;
 
-    _edgeSize: 1,
-    _clusterSize: 1,
-    _nodeSize: 2,
-
-    // Maximum num of nodes in all cluster
-    maxCluster: Math.max.apply(Math, Object.values(data.variables.clusterSizes)), 
-    minNodeSize: 3,
-    maxNodeSize: 10,
-    minEdgeSize: 0.1,
-    maxEdgeSize: 10,
-    maxProfiles: 5,
-};
-
-// # Initialize colors
-let coloring = {
-	off: "#000000",
-	inactive: "rgba(135, 121, 82, 0.2)",
-	active: "rgba(135, 121, 82, 1)",
-
-    edgeColor: "rgba(135, 121, 82, 0.05)",
-    inactiveEdgeColor: "rgba(135, 121, 82, 0.03)",
-
-	origin: "#FFD700",
-	red: "#d7385e",
-
-    clusterActive: [230, 121, 82], //"rgba(230, 121, 82, 1)"
-    clusterInactive: "rgba(135, 121, 82, 0.2)",
-    clusterEdge: "rgba(200, 121, 100, 1)",
-    clusterInactiveEdge: "rgba(200, 121, 100, 0.3)",
-
-	background: "rgb(252, 241, 212)",
-    tBackground: "rgb(252, 230, 200, 0.3)",
-	box: "rgba(145, 132, 96, 0.2)",
-	boxText: "rgba(0, 0, 0, 0.95)"
-}
+let c = coloring.clusterActive;
+coloring.clusterActive = c.slice(4, c.length-1).split(",").map(x => parseFloat(x));
 document.getElementById("container").style["background-color"]= coloring.background;
-document.getElementById("miniMap").style["background-color"]= coloring.tBackground;
+document.getElementById("miniMap").style["background-color"]= coloring.miniMapBackground;
 
 // # Initialize infoBox
 infoBox = info.firstElementChild
@@ -74,21 +45,19 @@ let g = {
     edges: []
 };
 
-
 // # Add cluster nodes 
 clusterPoints = {"": {x: 0, y: 0}};
 counter = 0;
 
-const point = function(angle, dependentPoint={x: 0, y: 0}, stretch) {
+const point = function(dependentPoint={x: 0, y: 0}, stretch) {
     // Returns an object containing x, y position of a cluster given
-    // the angle property and parent node's x, y object
     // if parent node's x, y object is not specified it'll be ignored
-    return {x: dependentPoint.x +  stretch * Math.sin(Math.random() * tau/2),
-            y: dependentPoint.y +  stretch * Math.cos(Math.random() * tau/2)};
+    return {x: dependentPoint.x + stretch * Math.cos(Math.random() * tau/2),
+            y: dependentPoint.y + stretch * Math.sin(Math.random() * tau/2)};
 };
 
-const addClusterPoint = function (cluster, angle) {
-    // Given a cluster id and its angle 
+const addClusterPoint = function (cluster) {
+    // Given a cluster id 
     // This function adds the cluster to clusterPoints object specifying its x, y position
     // As well as every ancestor of that cluster
     const parent = cluster.slice(0, cluster.length-1); // Get parent cluster
@@ -97,17 +66,17 @@ const addClusterPoint = function (cluster, angle) {
 
     else if (parent in clusterPoints) // if parent is already in clusterPoints
         if(parent === "")
-            clusterPoints[cluster] = point(angle, clusterPoints[parent], 0.3);    
+            clusterPoints[cluster] = point(clusterPoints[parent], 1);    
         else
             // Create object relying on parent position
-            clusterPoints[cluster] = point(angle, clusterPoints[parent], Math.max(5/getNumDigits(cluster), 1)); 
+            clusterPoints[cluster] = point(clusterPoints[parent], 10/(getNumDigits(cluster) ** 1.4)); 
 
     else{
         // When parent is not in clusterPoints and cluster isnt single digit
-        addClusterPoint(parent, angle); // Recursively apply function to parent
+        addClusterPoint(parent); // Recursively apply function to parent
 
         // After that create cluster point relying on parent node
-        clusterPoints[cluster] = point(angle, clusterPoints[parent], Math.max(5/getNumDigits(cluster), 1)); 
+        clusterPoints[cluster] = point(clusterPoints[parent], 10/(getNumDigits(cluster) ** 1.4)); 
     }
 };
 
@@ -120,6 +89,7 @@ const addNode = function(cluster){
     let name = "";
     let hidden = false;
     let size = 0.001;
+    let color = clusterColor(cluster, coloring.clusterActive);
 
     if(data.variables.clusters.some(x => cluster == x)){
         loop1: // Get name from cluster's children, assign as label
@@ -129,7 +99,17 @@ const addNode = function(cluster){
                 break loop1;
             }
         hidden = false;
-        size = data.variables.clusterSizes[cluster]/constants.maxCluster * constants._clusterSize;
+        size = data.variables.clusterSizes[cluster]/maxCluster * constants._clusterSize;
+    }
+
+    if(cluster == "5"){
+        name = "Outlier";
+        size = 1;
+    }
+    if(cluster == "4"){
+        name = "Protected";
+        size = 1
+        color = coloring.protectedCluster
     }
 
     g.nodes.push({
@@ -138,7 +118,7 @@ const addNode = function(cluster){
     x: clusterPoints[cluster].x,
     y: clusterPoints[cluster].y,
     size: size,
-    color: clusterColor(cluster), 
+    color: color, 
     hidden: hidden
     });    
 }
@@ -148,12 +128,11 @@ const addNode = function(cluster){
 for(key in data.variables.clusters){
     cluster = data.variables.clusters[key]
 
-    angle = counter * circleRule;
     counter += 1;
 
     loopWhile:
     while(true){
-        addClusterPoint(cluster, angle);
+        addClusterPoint(cluster);
         cluster = cluster.slice(0, cluster.length-1);
         if(cluster === "")
             break loopWhile;
@@ -215,29 +194,26 @@ for(key in data.variables.clusters){
 
 
 // # Add nodes
-// We determine the x, y position of nodes by randomly spacing them around the cluster point associated 
+// We determine the x, y position of nodes by uniformly spacing them around the cluster point associated 
 //  with the cluster they're in
 // see https://en.wikipedia.org/wiki/Polar_coordinate_system
-
 
 // Copy cluster sizes and use as a reference to place evenly spaces nodes in a circle around every cluster where
 // data.variables.clusterSizes is unchanged and stores sizes, and clusterSizes is changed and stores nodes left in cluster
 clusterSizes = Object.assign({}, data.variables.clusterSizes)
-counter = 1;
 for (node in data.nodes){
     current = data.nodes[node];
 
     fullSize = data.variables.clusterSizes[current.cluster];
     sizeLeft = clusterSizes[current.cluster];
     angle = tau/fullSize * (fullSize - sizeLeft);
-    counter++;
 
     g.nodes.push({
         id: current.json.id_str,
         label: current.json.name,
         x: clusterPoints[current.cluster].x + Math.sin(angle) * constants.nodeStretch,
         y: clusterPoints[current.cluster].y + Math.cos(angle) * constants.nodeStretch,
-        size: data.variables.clusterSizes[current.cluster]/constants.maxCluster * 
+        size: data.variables.clusterSizes[current.cluster]/maxCluster * 
                                 constants._clusterSize * constants._nodeSize / 5,
         color: coloring.active,
     });
@@ -250,7 +226,7 @@ for (node in data.nodes){
 origin = data.origin;
 fullSize = data.variables.clusterSizes[origin.cluster];
 sizeLeft = clusterSizes[origin.cluster];
-angle = tau/fullSize * (fullSize - sizeLeft);
+angle = tau/fullSize * (fullSize - sizeLeft-1);
 originSettings = {
     id: origin.json.id_str,
     label: origin.json.name,
@@ -281,7 +257,6 @@ for (node in data.nodes) {
                 target: id,
                 size: constants._edgeSize,
                 color: coloring.edgeColor,
-                type: "cruve"
             });
         counter++;
         }
@@ -302,10 +277,8 @@ function displayDetails(id, append=false){
     /* Displays the details of the node given */
 
     if (id.includes("c")) // If clicked node is a cluster
-        if(!data.variables.clusters.includes(id.slice(1))){ // if cluster doesnt have nodes then ignore it
-            console.log(id.slice(1))
+        if(!data.variables.clusters.includes(id.slice(1))) // if cluster doesnt have nodes then ignore it
             return;
-        }
         else
             result = clusterDetails(id); 
     else
@@ -335,20 +308,21 @@ function profileDetails(node){
     else
         stack.push(node.json.id_str)
 
-    image = `<img style="position: absolute" src=${node.json.profile_image_url}>`;
+    profileImg = `<img style="position: absolute" src=${node.json.profile_image_url}>`;
 
-    header = `<h3 style="text-align:center;">
-            <a href=https://twitter.com/${node.json.screen_name}>${node.json.name}</a><br>
-            ${node.json.friends_count} Following&emsp;
-            ${node.json.followers_count} Followers<br><hr style="width:50%;">`;
+    header =    `<h3 style="text-align:center; background-color: rgb(20, 20, 20, 0.1);">
+                <a href=https://twitter.com/${node.json.screen_name}>${node.json.name}</a><br>
+                ${node.json.friends_count} Following&emsp;
+                ${node.json.followers_count} Followers<br><hr style="width:50%;">`;
 
-    description = `${node.json.description}<br><hr style="width:50%;">
+    description =       `${node.json.description}<br><hr style="width:50%;">
                         Tweet count: ${node.json.statuses_count}&emsp;
                         Favorite count: ${node.json.favourites_count}<br>
-                        <a href=${node.json.url}>Link</a>&emsp;
-                        Location: ${node.json.location}</h3>`;
+                        ${ (node.json.url ? `<a href=${node.json.url}>Link</a>&emsp;` : "")}
+                        ${ (node.json.location ? `Location: ${node.json.location}` : "")}<br></h3>`;
+    //<h5 style="text-align:center; background-color: rgb(20, 20, 20, 0.1);">${node.json.status.text}</h5>
 
-    return image + header + description;
+    return profileImg + header + description;
 }
 
 function clusterDetails(cluster){
@@ -366,15 +340,17 @@ function clusterDetails(cluster){
         nodesNum += 1;
         tweetCount += node.json.statuses_count;
         favCount += node.json.favourites_count;
-        imgs += ` <img style="position: relative" src= ${node.json.profile_image_url} > `;
-        names.push("&emsp;" + node.json.name);
+        imgs += ` <img style="position: relative; " src= ${node.json.profile_image_url} > `;
+        names.push("<br>" + node.json.name);
         
     }
-    header = `<h3 style="text-align:center;"> ${names[0]}'s Cluster<br>
-              Number Of nodes: ${nodesNum}&emsp; Tweet Count: ${tweetCount}&emsp; Favorite Count: ${favCount}
-              <br><hr style="width:50%;">${names}<hr style="width:50%;">`;
+    header = `<h3 style="text-align:center;  text-shadow: 2px 2px white;"> ${names[0]}'s Cluster<br>
+              Number Of nodes: ${nodesNum}&emsp; Tweet Count: ${tweetCount}&emsp; Favorite Count: ${favCount}&emsp; ID: ${cluster}
+              <br></h3><hr style="width:50%;">
+              <h3 style="text-align:center; letter-spacing: 1px;">${names}</h3><hr style="width:50%;">`;
+
     description = imgs;
-    return header + imgs + "</h3>"
+    return '<div style="background-color: rgb(20, 20, 20, 0.1); text-align:center;">' + header + imgs + "</div>"
 }
 
 function clearDetails(){
@@ -466,6 +442,7 @@ function markEdges(id, onColor, offColor, ctrlKey=false){
 }
 
 // ### Sigmajs
+require('sigmajs')
 let s = new sigma({
     graph: g,
     settings: {
@@ -479,7 +456,7 @@ let s = new sigma({
         zoomingRatio: 3,
 
         verbose: true,
-        scalingMode: "outside"
+        scalingMode: scalingMode
     },
 });
 
@@ -590,9 +567,8 @@ s.bind('doubleClickStage', function(e) {
 // ### Extras
 
 // Get color function
-function clusterColor(cluster){
+function clusterColor(cluster, c){
     // Determines color of cluster based on cluster ID 
-    let c = coloring.clusterActive;
     let sum = getNumDigits(cluster);
     return `rgba(${c[0]}, ${c[1] * sum / 10}, ${c[2] * sum / 10}, 1)`
 }
