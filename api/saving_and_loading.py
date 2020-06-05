@@ -7,7 +7,7 @@ import sys
 
 
 def loadGraph(screenName):
-    with shelve.open("shelve/graph_shelve") as sh:
+    with shelve.open("shelve/graph_shelve", "r") as sh:
         graph = sh[screenName]
     return graph
 
@@ -54,7 +54,7 @@ def loadAll(screenName, newName=False):
 
 def getShelveKeys():
     """returns a list of keys (profiles) stored inside shelve"""
-    with shelve.open("shelve/graph_shelve") as sh:
+    with shelve.open("shelve/graph_shelve", "w") as sh:
         return list(sh.keys())
 
 
@@ -62,7 +62,7 @@ def deleteShelveKey(screenName):
     if screenName not in getShelveKeys():
         raise KeyError
 
-    with shelve.open("shelve/graph_shelve") as sh:
+    with shelve.open("shelve/graph_shelve", "w") as sh:
         del sh[screenName]
 
 
@@ -70,7 +70,7 @@ def saveShelve(screenName, graph: Graph, dumb=False, onlyDone=True, numNodes=0,
                numPartitions=0, theme="default", layout="default"):
     """Saves graph object to shelve as well as dumb the data to data.json if dumb=True"""
 
-    with shelve.open("shelve/graph_shelve") as sh:
+    with shelve.open("shelve/graph_shelve", "w") as sh:
         sh[screenName] = graph
 
     if dumb:
