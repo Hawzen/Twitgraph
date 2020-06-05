@@ -1,69 +1,100 @@
 from saving_and_loading import *
-from time import sleep
+from argparse import ArgumentParser, RawTextHelpFormatter
+from warnings import warn
+from os.path import abspath
+from automate import automate
 
-# screenName = input("Enter a twitter handle to be searched:\t")
-screenName = "_KSU"
-api, graph = loadAll(screenName)
+handlestring = "Twitter handle (the part in brackets @[foo])"
 
-minutes = 15
-enumerations = 80
+parser = ArgumentParser(prog="Twitgraph",
+                        description="Collect:\tCollect data from twitter api.\n"
+                                    "Get Keys:\tList and/or delete keys from database.\n"
+                                    "Show:\t\tPrint contents of one or more handles.\n"
+                                    "Visualize:\tVisualize graph.",
+                        formatter_class=RawTextHelpFormatter)
+subParsers = parser.add_subparsers(dest="selector")
 
-sve = True if input("Save data? (y/n) ") == "y" else False
-graph.listSearch_graph(api, depth=99)
-for i in range(enumerations):
-    print(f"\nFAfter Lst Search.\n\tTotal number of nodes: {graph.getNodeNum()}\
-                                \n\tTotal number of done nodes: {graph.getDoneNum()}\n")
+# Search Data
+dataParse = subParsers.add_parser("collect", description="Collect data from twitter api")
+dataParse.add_argument("-H", "--handle", dest="screen_name", metavar="Handle", required=True, help=handlestring)
+dataParse.add_argument("-e", "--enumeration", dest="enum", metavar="Enumeration", default=1, type=float,
+                       help="Number of times the api is called (each takes 15 minutes)")
+dataParse.add_argument("-q", "--quiet", dest="quiet", action="store_true", help="Displays less statuses")
 
-    graph.idSearch_graph(api)
-    print(f"\nFAfter Id Search.\n\tTotal number of nodes: {graph.getNodeNum()}\
-                                \n\tTotal number of done nodes: {graph.getDoneNum()}\n")
+# Get/Delete keys
+keyParser = subParsers.add_parser("getkeys", description="List and/or delete keys from database")
+# keyParser.add_argument("-H", "--handle", dest="screen_names", action="append", nargs="+", metavar="Handle",
+#                        help=handlestring)
+keyParser.add_argument("-d", "--delete", dest="deleteSome", action="store_true",
+                       help="Delete all information of a\\an handle\s")
 
-    # if graph.getNodeNum() - graph.getDoneNum() <= 15:
-    #     graph.mopSearch(api)
+# Show data
+showParse = subParsers.add_parser("show", description="Print contents of one or more handles")
+showParse.add_argument("-H", "--handle", dest="screen_names", nargs="+", metavar="Handle",
+                       help=handlestring, required=True)
+showParse.add_argument("-p", "--peek", dest="peek", action="store_true",
+                       help="Print the first 10 users in selected handles")
 
-    saveShelve(screenName, graph, dumb=sve, onlyDone=True, numPartitions=50)
-    finished = list(node.id for node in graph.nodes.values() if any(node.done))
-    with open("logs.txt", 'a') as file:
-        file.write(str(finished))
+# Create visual
+visualParse = subParsers.add_parser("visualize", description="Visualize graph")
+visualParse.add_argument("-H", "--handle", dest="screen_name", metavar="Handle", required=True, help=handlestring)
+visualParse.add_argument("-n", "--nodenum", dest="nodeNum", metavar="Node Number", type=int, default=0,
+                         help="Number of nodes visualized (default for all nodes)")
+visualParse.add_argument("-p", "--partitionnum", dest="partitionNum", metavar="Partition Number", type=int, default=0,
+                         help="Number of times data is partitioned (default for 0.1 of node number)")
+visualParse.add_argument("-t", "--theme", dest="theme", metavar="Theme", default="default",
+                         help="Visual style of graph")
+visualParse.add_argument("-l", "--layout", dest="layout", metavar="Layout", default="default",
+                         help="Layout of (x, y) positions of nodes in the graph")
 
-    print(f"\nFinished {i + 1} iteration.\n\tTotal number of nodes: {graph.getNodeNum()}\
-                                \n\tTotal number of done nodes: {graph.getDoneNum()}\n")
-    for minute in range(15):
-        print("\r░ MINUTES UNTIL NEXT BATCH\t{:>02}".format(15 - minute), end=" ")
-        sleep(60)
-    sleep(15)
-    print("\r░ MINUTES UNTIL NEXT BATCH\t{:>02}".format(0), end=" ")
+# ["visualize", "-Hgraph", "-n 500", "-p 50", "-truby", "-ldefault"]
+args = parser.parse_args()
 
-### Data
-# X TODO: Check cluster splitting if works
-# TODO: Add level of node with respect to origin to node attributes
-# X TODO: Add 'weight' function that calculates weight of any edge
-# TODO: Add database of twitter shelves
-# X TODO: Add node.numFriends in JSON
-# X TODO: CLUSTER HIERARCHY
-# X  1- Each node should belong to a family of clusters where 'node.cluster = 2122' means the node's ancestors
-#   belong to the second cluster, and its grandfather belongs to the first subcluster.. etc
+if args.selector is None:
+    parser.print_help()
 
+elif args.selector == "collect":
 
-### Graph
-# X TODO: Change size of each node depending on node.numFriends (in JSON)
-# TODO: Add 'Overview' button that highlights general information about the graph
-# X TODO: Add minimap
-# X TODO: Cluster hierarchy:
-# X  1- Edges between clusters and subclusters are dotted, thick and have a unique color
-# X TODO: Clusters as nodes:
-# X  1- Add clusters info box that provides a short summary of all clusters
-# X  2- Clicking a cluster shows all names of nodes inside of it and maybe other info
-# N  3- Implement some sort of accompanying animation (If it takes too much time no need)
-# X  4- Cluster nodes should size according to the number of elements inside of it
-# N  5- Nodes inside cluster should be hidden until user clicks cluster node
+    # Check name
+    newName = False
+    if args.screen_name not in getShelveKeys():
+        if input(f"Handle name {args.screen_name} not in database. Do you want to create it? (y/n) ") != "y":
+            print("Quitting")
+            sys.exit()
+        else:
+            newName = True
 
+    # Check API
+    warn("\nMake sure to have your:\n\tapiKey,\n\tapiSecretKey,\n\taccessToken,\n\taccessTokenSecret\nin a "
+         "file named twitterkeys.txt on the same level as this file", category=Warning)
 
-### Later
-# TODO: Generate graph automatically given screen name, Oauth info and runs browser
-# TODO: Add about button
+    api, graph = loadAll(args.screen_name, newName)
+    automate(args.screen_name, graph, args.enum, args.quiet)
 
-# graph.display()
+elif args.selector == "getkeys":
+    for screenName in getShelveKeys():
+        if args.deleteSome:
+            if input(f"Do you want to delete {screenName}? (y/n) ") == "y":
+                deleteShelveKey(screenName)
+        else:
+            print(f"\t{screenName}")
 
+elif args.selector == "show":
+    if len(args.screen_names) > 1:
+        if input(
+                "You chose more than one handle to show, this will load all handles from the database for a few seconds, "
+                "is that ok? (y/n) ") != "y":
+            print("quitting")
+            sys.exit()
 
-saveShelve(screenName, graph, dumb=sve, onlyDone=True, numNodes=0, numPartitions=50)
+    for screenName in args.screen_names:
+        graph = loadGraph(screenName)
+        graph.display(num=10 if args.peek else 0, depth=5)
+
+elif args.selector == "visualize":
+    saveShelve(args.screen_name, loadGraph(args.screen_name), dumb=True, onlyDone=True, numNodes=args.nodeNum,
+               numPartitions=args.partitionNum, theme=args.theme, layout=args.layout)
+    print(f"Copy and paste thins link to a browser to see the visualization {str(abspath('../index.html'))}")
+
+else:
+    print(args.selector)

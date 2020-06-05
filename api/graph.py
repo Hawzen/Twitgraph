@@ -165,7 +165,6 @@ class Graph:
             if not any(node.done):  # If already done skip
                 if not node.user.protected:  # If protected label done and skip
                     if limit < 1:
-                        print("Reached Limit idSearch, breaking...")
                         break
 
                     node.idSearch(api)
@@ -252,21 +251,26 @@ class Graph:
         if not start:
             start = self.origin
         output = self.printFriends(start, indent, depth)
+        nodeNum = sum(
+            1 for _ in self.nodes.values())  # Total num of nodes
         printableNum = sum(
-            1 for node in self.nodes.values() if any(node.done))  # Num of nodes with node.done: (False, True)
-        completeNum = sum(
-            1 for node in self.nodes.values() if all(node.done))  # Num of nodes with node.done: (True, True)
+            1 for node in self.nodes.values() if any(node.done))  # Num of nodes with node.done: (True, False)
 
-        for count, friend in enumerate(self.nodes.keys()):
-            if any(self.nodes[friend].done):
-                output += self.printFriends(self.nodes[friend], indent, depth)
+        for count, Id in enumerate(self.nodes.keys()):
+
+            if count == num:
+                output += f"Total Nodes is {nodeNum}, of which {printableNum} can be visualized " \
+                          f"while {nodeNum - printableNum} cannot be\n"
+                break
+
+            if Id == self.origin.id:
+                continue
+
+            if any(self.nodes[Id].done):
+                output += self.printFriends(self.nodes[Id], indent, depth)
             else:
                 count += -1
-            if count == num:
-                output += f"Total Nodes is {printableNum}, of which {completeNum} had all of their friends be in " \
-                          f"graph.nodes and {printableNum - completeNum} only had the ids of their friends stored\n" \
-                          f"Number of nodes printed is {count + 1}\n"
-                break
+
         print(output)
 
 
