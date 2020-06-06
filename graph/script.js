@@ -130,8 +130,8 @@ const addNode = function(cluster){
 
     let name = "";
     let hidden = false;
-    let size = 0.001;
-    let color = clusterColor(cluster, coloring.clusterActive);
+    let size = 0.0001;
+    let color = coloring.background;
 
     if(data.variables.clusters.some(x => cluster == x)){
         loop1: // Get name from cluster's children, assign as label
@@ -141,6 +141,7 @@ const addNode = function(cluster){
                 break loop1;
             }
         hidden = false;
+        color = clusterColor(cluster, coloring.clusterActive)
         size = data.variables.clusterSizes[cluster]/maxCluster * constants.clusterSize;
     }
 
@@ -604,7 +605,7 @@ s.addRenderer({
 
         labelThreshold: 7,
         defaultLabelColor: coloring.labelColor,
-        
+
         font: "monospace",
     }
 });
