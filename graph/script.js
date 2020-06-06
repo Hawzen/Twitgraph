@@ -253,12 +253,10 @@ for (node in data.nodes){
     g.nodes.push({
         id: current.json.id_str,
         label: current.json.name,
-        x: clusterPoints[current.cluster].x + 
-        	Math.sin(angle) *
+        x: clusterPoints[current.cluster].x + Math.cos(angle) *
         	(data.variables.clusterSizes[current.cluster] / maxCluster * constants.nodeStretch),
 
-        y: clusterPoints[current.cluster].y +
-        	Math.cos(angle) *
+        y: clusterPoints[current.cluster].y + Math.sin(angle) *
         	(data.variables.clusterSizes[current.cluster] / maxCluster * constants.nodeStretch),
 
         size: data.variables.clusterSizes[current.cluster]/maxCluster * 
@@ -266,7 +264,10 @@ for (node in data.nodes){
         color: coloring.active,
         hidden: true
     });
-    clusterSizes[current.cluster] += -1
+    console.log(angle, sizeLeft)
+    // console.log( Math.sin(angle) *
+    //     	(data.variables.clusterSizes[current.cluster] / maxCluster * constants.nodeStretch))
+    clusterSizes[current.cluster] += -1;
 }
 
 
@@ -275,21 +276,25 @@ for (node in data.nodes){
 origin = data.origin;
 fullSize = data.variables.clusterSizes[origin.cluster];
 sizeLeft = clusterSizes[origin.cluster];
-angle = tau/fullSize * (fullSize - sizeLeft-1);
+angle = tau/fullSize * (fullSize - sizeLeft);
+// FIXME: origin node doesn't work
 originSettings = {
     id: origin.json.id_str,
     label: origin.json.name,
-	x: clusterPoints[current.cluster].x + 
-		Math.sin(angle) *
-		(data.variables.clusterSizes[current.cluster] / maxCluster + constants.nodeStretch),
-	y: clusterPoints[current.cluster].y +
-		Math.cos(angle) *
-		(data.variables.clusterSizes[current.cluster] / maxCluster + constants.nodeStretch),
-	size: data.variables.clusterSizes[current.cluster]/constants.maxCluster * 
-	                            constants.clusterSize * constants.nodeSize / 5,
-    color: coloring.origin,
-    }
+	x: clusterPoints[origin.cluster].x,
+	// + Math.cos(angle) * (data.variables.clusterSizes[origin.cluster] / maxCluster + constants.nodeStretch),
 
+	y: clusterPoints[origin.cluster].y, 
+	// + Math.sin(angle) * (data.variables.clusterSizes[origin.cluster] / maxCluster + constants.nodeStretch),
+
+	size: data.variables.clusterSizes[origin.cluster]/maxCluster * constants.clusterSize * 1.1,
+    color: coloring.origin,
+    hidden: true
+    }
+// console.log(Math.cos(angle) *
+// 		(data.variables.clusterSizes[origin.cluster] / maxCluster + constants.nodeStretch),
+// 		clusterPoints[origin.cluster].y + Math.sin(angle) *
+// 		(data.variables.clusterSizes[origin.cluster] / maxCluster + constants.nodeStretch))
 index = g.nodes.findIndex(node => node.id == origin.json.id_str);
 g.nodes[index] = originSettings;
 
@@ -331,7 +336,7 @@ function displayDetails(id, append=false){
     /* Displays the details of the node given */
 
     if (id.includes("c")) // If clicked node is a cluster
-        if(!data.variables.clusters.includes(id.slice(1))) // if cluster doesnt have nodes then ignore it
+        if(!data.variables.clusters.includes(id.slice(1))) // if cluster doesn't have nodes then ignore it
             return;
         else
             result = clusterDetails(id); 
@@ -696,7 +701,7 @@ s.bind('doubleClickStage', function(e) {
 function clusterColor(cluster, c){
     // Determines color of cluster based on cluster ID 
     let sum = getNumDigits(cluster);
-    return `rgba(${c[0]}, ${c[1] * sum / 10}, ${c[2] * sum / 10}, ${(c.length > 3) ? c[3] : 1})`
+    return `rgba(${c[0]}, ${c[1] * sum / 10}, ${c[2] * sum / 3}, ${(c.length > 3) ? c[3] : 1})`
 }
 
 function getNumDigits(num){

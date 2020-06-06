@@ -69,7 +69,8 @@ elif args.selector == "collect":
          "file named twitterkeys.txt on the same level as this file", category=Warning)
 
     api, graph = loadAll(args.screen_name, newName)
-    automate(args.screen_name, graph, args.enum, args.quiet)
+    automate(args.screen_name, graph, api, args.enum, args.quiet)
+    saveShelve(args.screen_name, graph, dumb=False, onlyDone=True)
 
 elif args.selector == "getkeys":
     for screenName in getShelveKeys():

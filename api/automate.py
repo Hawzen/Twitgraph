@@ -2,13 +2,13 @@ from saving_and_loading import *
 from time import sleep
 
 
-def automate(screenName, graph, api, enumerations, quiet=False, dumb=True):
+def automate(screenName, graph, api, enumerations, quiet=False, dumb=False):
     for i in range(enumerations):
         graph.idSearch_graph(api)
         if graph.getNodeNum() - graph.getDoneNum() <= 15:
             graph.mopSearch(api)
 
-        saveShelve(screenName, graph, dumb=dumb, onlyDone=True, numPartitions=50)
+        saveShelve(screenName, graph, dumb=dumb, onlyDone=True)
         if not quiet: print(f"\nFinished {i + 1} iteration.\n\tTotal number of nodes: {graph.getNodeNum()}\
                                     \n\tTotal number of done nodes: {graph.getDoneNum()}\n")
 

@@ -3,6 +3,8 @@ from spectral_clustering import getClusters
 import tweepy
 import shelve
 import json
+from os.path import exists
+from os import makedirs
 import sys
 
 
@@ -54,7 +56,10 @@ def loadAll(screenName, newName=False):
 
 def getShelveKeys():
     """returns a list of keys (profiles) stored inside shelve"""
-    with shelve.open("shelve/graph_shelve", "w") as sh:
+    if not exists('shelve'):
+        makedirs('shelve')
+
+    with shelve.open("shelve/graph_shelve", "c") as sh:
         return list(sh.keys())
 
 
@@ -69,8 +74,10 @@ def deleteShelveKey(screenName):
 def saveShelve(screenName, graph: Graph, dumb=False, onlyDone=True, numNodes=0,
                numPartitions=0, theme="default", layout="default"):
     """Saves graph object to shelve as well as dumb the data to data.json if dumb=True"""
+    if not exists('shelve'):
+        makedirs('shelve')
 
-    with shelve.open("shelve/graph_shelve", "w") as sh:
+    with shelve.open("shelve/graph_shelve", "c") as sh:
         sh[screenName] = graph
 
     if dumb:
