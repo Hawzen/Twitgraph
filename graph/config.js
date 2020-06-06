@@ -1,7 +1,7 @@
 let config =
 {
         "constants": {
-                "nodeStretch": 0.05,
+                "nodeStretch": 0.01,
                 "edgeSize": 1,
                 "clusterSize": 1,
                 "nodeSize": 2,
