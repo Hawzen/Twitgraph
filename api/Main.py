@@ -17,7 +17,7 @@ subParsers = parser.add_subparsers(dest="selector")
 # Search Data
 dataParse = subParsers.add_parser("collect", description="Collect data from twitter api")
 dataParse.add_argument("-H", "--handle", dest="screen_name", metavar="Handle", required=True, help=handlestring)
-dataParse.add_argument("-e", "--enumeration", dest="enum", metavar="Enumeration", default=1, type=float,
+dataParse.add_argument("-e", "--enumeration", dest="enum", metavar="Enumeration", default=1, type=int,
                        help="Number of times the api is called (each takes 15 minutes)")
 dataParse.add_argument("-q", "--quiet", dest="quiet", action="store_true", help="Displays less statuses")
 

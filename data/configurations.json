@@ -44,7 +44,9 @@
 
                 "box": "rgba(145, 132, 96, 0.2)",
                 "boxText": "rgba(0, 0, 0, 0.95)",
-                "boxTextShadow": "white"
+                "boxTextShadow": "white",
+
+                "labelColor": "black"
             },
 
             "edges": { 
@@ -81,7 +83,9 @@
 
                 "box": "rgba(216,59,76, 0.8)",
                 "boxText": "black",
-                "boxTextShadow": "white"
+                "boxTextShadow": "white",
+
+                "labelColor": "white"
             }
         },
 
@@ -114,7 +118,9 @@
 
                 "box": "rgba(143, 187, 188, 0.8)",
                 "boxText": "black",
-                "boxTextShadow": "rgb(143, 188, 187)"
+                "boxTextShadow": "rgb(143, 188, 187)",
+
+                "labelColor": "white"
             }
         }
     },

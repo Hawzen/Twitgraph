@@ -603,6 +603,8 @@ s.addRenderer({
         hideEdgesOnMove: true,
 
         labelThreshold: 7,
+        defaultLabelColor: coloring.labelColor,
+        
         font: "monospace",
     }
 });
