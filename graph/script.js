@@ -4,7 +4,7 @@ data.nodes[data.origin.json.id_str] = data.origin;
 
 let counter, counter2, current, id, node, index, origin, temp, name,
  element, elements, originSettings, angle,
- clusters, cluster, clusterPoints, clusterSizes, fullSize, sizeLeft,
+ clusters, cluster, clusterSizes, fullSize, sizeLeft,
  box, infoBox, keepDetails, nodegraph, lights, scalingMode;
 
 // ### Initialize variables
@@ -57,70 +57,180 @@ let g = {
     edges: []
 };
 
-// # Add cluster nodes 
-clusterPoints = {"": {x: 0, y: 0}};
-counter = 0;
+// // # Add cluster nodes 
+// clusterPoints = {"": {x: 0, y: 0}};
+// counter = 0;
 
-let point
-switch(layout){
-    case "default":
-        point = function(dependentPoint={x: 0, y: 0}, stretch) {
-            // Returns an object containing x, y position of a cluster given
-            // if parent node's x, y object is not specified it'll be ignored
-            if (dependentPoint.x == 0, dependentPoint.y == 0)
-                stretch = 1;
-            else
-                stretch = 10/(getNumDigits(cluster) ** 1.4);
+// let point
+// switch(layout){
+//     case "default":
+//         point = function(dependentPoint={x: 0, y: 0}, stretch) {
+//             // Returns an object containing x, y position of a cluster given
+//             // if parent node's x, y object is not specified it'll be ignored
+//             if (dependentPoint.x == 0, dependentPoint.y == 0)
+//                 stretch = 1;
+//             else
+//                 stretch = 10/(getNumDigits(cluster) ** 1.4);
 
-            return {x: dependentPoint.x + Math.cos(Math.random() * tau/2) / Math.min(getNumDigits(cluster), 4),
-                    y: dependentPoint.y + Math.sin(Math.random() * tau/2) / Math.min(getNumDigits(cluster), 5)};
-        };
-        break;
-    case "tree":
-        point = function(dependentPoint={x: 0, y: 0}, cluster) {
-            // Returns an object containing x, y position of a cluster given
-            // the angle property and parent node's x, y object
-            // if parent node's x, y object is not specified it'll be ignored
-            if (dependentPoint.x == 0, dependentPoint.y == 0)
-                stretch = 1;
-            else
-                stretch = 10/(getNumDigits(cluster) ** 1.4);
+//             return {x: dependentPoint.x + Math.cos(Math.random() * tau/2) / Math.min(getNumDigits(cluster), 4),
+//                     y: dependentPoint.y + Math.sin(Math.random() * tau/2) / Math.min(getNumDigits(cluster), 5)};
+//         };
+//         break;
+//     case "tree":
+//         point = function(dependentPoint={x: 0, y: 0}, cluster) {
+//             // Returns an object containing x, y position of a cluster given
+//             // the angle property and parent node's x, y object
+//             // if parent node's x, y object is not specified it'll be ignored
+//             if (dependentPoint.x == 0, dependentPoint.y == 0)
+//                 stretch = 1;
+//             else
+//                 stretch = 10/(getNumDigits(cluster) ** 1.4);
 
-            let up;
-            if (dependentPoint.x == 0, dependentPoint.y == 0)
-                (cluster == 1 ? true : false)
-            else
-                up = (parseInt(cluster.slice(cluster.length-1)) == 1 ? true : false)
+//             let up;
+//             if (dependentPoint.x == 0, dependentPoint.y == 0)
+//                 (cluster == 1 ? true : false)
+//             else
+//                 up = (parseInt(cluster.slice(cluster.length-1)) == 1 ? true : false)
 
-            return {x: dependentPoint.x +  2 + 2 * Math.random(),
-                    y: dependentPoint.y +  stretch * (up ? -1 : 1)};
-        };
-        break;
+//             return {x: dependentPoint.x +  2 + 2 * Math.random(),
+//                     y: dependentPoint.y +  stretch * (up ? -1 : 1)};
+//         };
+//         break;
+//     case "gold":
+//         point = function()
+
+// }
+
+// const addClusterPoint = function (cluster) {
+//     // Given a cluster id 
+//     // This function adds the cluster to clusterPoints object specifying its x, y position
+//     // As well as every ancestor of that cluster
+//     const parent = cluster.slice(0, cluster.length-1); // Get parent cluster
+    
+//     if(cluster in clusterPoints){}
+
+//     else if (parent in clusterPoints) // if parent is already in clusterPoints
+//         if(parent === "")
+//             clusterPoints[cluster] = point(clusterPoints[parent], cluster);    
+//         else
+//             // Create object relying on parent position
+//             clusterPoints[cluster] = point(clusterPoints[parent], cluster); 
+
+//     else{
+//         // When parent is not in clusterPoints and cluster isnt single digit
+//         addClusterPoint(parent); // Recursively apply function to parent
+
+//         // After that create cluster point relying on parent node
+//         clusterPoints[cluster] = point(clusterPoints[parent], cluster); 
+//     }
+// };
+
+// Add all clusters to clusterPoints
+let clusterPoints = {};
+let ccc = [{x: 0, y: 0, cluster: ""}]
+for(key in data.variables.clusters){
+    cluster = data.variables.clusters[key]
+    loopWhile:
+    while(true){
+    	if(!ccc.some(x => x.cluster == cluster))
+        	ccc.push({x: 0, y: 0, cluster: cluster});
+        cluster = cluster.slice(0, cluster.length-1);
+        if(cluster === "")
+            break loopWhile;
+    }
 }
 
-const addClusterPoint = function (cluster) {
-    // Given a cluster id 
-    // This function adds the cluster to clusterPoints object specifying its x, y position
-    // As well as every ancestor of that cluster
-    const parent = cluster.slice(0, cluster.length-1); // Get parent cluster
-    
-    if(cluster in clusterPoints){}
+let L = 0.5; // Spring rest length
+let Kr = 0.1; // repulsive force constant
+let Ks = 0.3; // spring constant
+let deltaT = 1; // time step
 
-    else if (parent in clusterPoints) // if parent is already in clusterPoints
-        if(parent === "")
-            clusterPoints[cluster] = point(clusterPoints[parent], cluster);    
-        else
-            // Create object relying on parent position
-            clusterPoints[cluster] = point(clusterPoints[parent], cluster); 
+let N = ccc.length;
 
-    else{
-        // When parent is not in clusterPoints and cluster isnt single digit
-        addClusterPoint(parent); // Recursively apply function to parent
+for(let iii=0; iii < 2000; iii++){
+	// Initialize net forces
+	for (key in ccc){
+	    ccc[key].forceX = 0;
+	    ccc[key].forceY = 0;
+	}
 
-        // After that create cluster point relying on parent node
-        clusterPoints[cluster] = point(clusterPoints[parent], cluster); 
-    }
-};
+	// Repulsion between all pairs
+	let flag = false
+	for(let i1=0; i1 < ccc.length-1; i1++){
+		node1 = ccc[i1];
+		for(let i2=i1+1; i2 < ccc.length; i2++){
+			node2 = ccc[i2];
+			flag = (node2.cluster.slice(0, -1) == node1.cluster.slice(0, -1) ? true : false)
+			dx = node2.x - node1.x;
+			dy = node2.y - node1.y;
+			if (dx != 0 || dy != 0){
+				let distanceSquared = dx ** 2 + dy ** 2;
+				let distance = Math.sqrt(distanceSquared);
+				let force = Kr / distanceSquared;
+				let fx = force * dx / distance;
+				let fy = force * dy / distance;
+				node1.forceX = node1.forceX - fx;
+				node1.forceY = node1.forceY - fy;
+				node2.forceX = node2.forceX + fx;
+				node2.forceY = node2.forceY + fy;
+			}
+			else if(dx == 0 && dy == 0){
+				node1.forceX = Math.random() * 0.1;
+				node1.forceY = Math.random() * 0.1;
+				node2.forceX = Math.random() * 0.1;
+				node2.forceY = Math.random() * 0.1;
+			}
+		}
+	}
+
+	// Spring force between adjacent pairs 
+	for(let i1=0; i1 < ccc.length; i1++){
+		node1 = ccc[i1];
+		for(let i2=0; i2 < ccc.length; i2++){
+			// If two not neighbors continue
+			if (!(node1.cluster.slice(0, cluster.length-1) == ccc[i2].cluster
+				|| ccc[i2].cluster.slice(0, cluster.length-1) == node1.cluster))
+				continue;
+
+			node2 = ccc[i2];
+			if (i1 < i2){
+				let dx = node2.x - node1.x;
+				let dy = node2.y - node1.y;
+				if(dx != 0 || dy != 0){
+					let distance = (dx ** 2 + dy ** 2);
+					let force = Ks * (distance - L);
+					let fx = force * dx / distance;
+					let fy = force * dy / distance;
+					node1.forceX = node1.forceX + fx;
+					node1.forceY = node1.forceY + fy;
+					node2.forceX = node2.forceX - fx;
+					node2.forceY = node2.forceY - fy;
+				}
+			}
+		}
+	}
+	
+	// Update positions
+	for(let i=0; i < N; i++){
+	node = ccc[i];
+	let dx = deltaT * node.forceX;
+	let dy = deltaT * node.forceY;
+	let displacementSquared = dx ** 2 + dy ** 2;
+	if (displacementSquared > 1000){
+		let s = Math.sqrt(1000/displacementSquared)
+		dx = dx * s
+		dy = dy * s
+	}
+	node.x = node.x + dx;
+	node.y = node.y + dy;
+	}
+}
+
+for(let i=0; i < ccc.length; i++){
+	cluster = ccc[i];
+	clusterPoints[cluster.cluster] = {x: cluster.x, y: cluster.y};
+}
+
 
 const addNode = function(cluster){
     // Given a cluster id, adds it to g.nodes
@@ -146,7 +256,7 @@ const addNode = function(cluster){
     }
 
     if(cluster == "5"){
-        name = "Outlier";
+        name = "Outliers";
         size = 1;
     }
     if(cluster == "4"){
@@ -167,23 +277,24 @@ const addNode = function(cluster){
 }
 
 
-// Add all clusters to clusterPoints
-for(key in data.variables.clusters){
-    cluster = data.variables.clusters[key]
+// // Add all clusters to clusterPoints
+// for(key in data.variables.clusters){
+//     cluster = data.variables.clusters[key]
 
-    counter += 1;
+//     counter += 1;
 
-    loopWhile:
-    while(true){
-        addClusterPoint(cluster);
-        cluster = cluster.slice(0, cluster.length-1);
-        if(cluster === "")
-            break loopWhile;
-    }
-}
+//     loopWhile:
+//     while(true){
+//         addClusterPoint(cluster);
+//         cluster = cluster.slice(0, cluster.length-1);
+//         if(cluster === "")
+//             break loopWhile;
+//     }
+// }
 
 
 // Add all clusters to g.nodes
+addNode("");
 for(key in data.variables.clusters){
     cluster = data.variables.clusters[key];
 
@@ -208,6 +319,25 @@ const getClusterEdge = function(cluster) {
 }
 
 let check = [];
+
+g.edges.push({
+	id: "e_c_c1",
+	source: "c",
+	target: "c1",
+	size: constants.edgeSize * 4,
+	color: coloring.clusterEdge,
+	type: config.edges.clusterEdges
+})
+
+g.edges.push({
+	id: "e_c_c2",
+	source: "c",
+	target: "c2",
+	size: constants.edgeSize * 4,
+	color: coloring.clusterEdge,
+	type: config.edges.clusterEdges
+})
+
 for(key in data.variables.clusters){
     cluster = data.variables.clusters[key];
     
@@ -265,7 +395,6 @@ for (node in data.nodes){
         color: coloring.active,
         hidden: true
     });
-    console.log(angle, sizeLeft)
     // console.log( Math.sin(angle) *
     //     	(data.variables.clusterSizes[current.cluster] / maxCluster * constants.nodeStretch))
     clusterSizes[current.cluster] += -1;
