@@ -15,10 +15,6 @@ const nodeKeys = Object.keys(data.nodes);
 const info = document.getElementById("info");
 const tau = 2*Math.PI;
 const maxCluster = Math.max.apply(Math, Object.values(data.variables.clusterSizes))
-if (nodeKeys.length > 100)
-    scalingMode = "outside";
-else
-    scalingMode = "inside";
 
 // # Load config settings
 const layout = config.layout;
@@ -57,180 +53,7 @@ let g = {
     edges: []
 };
 
-// // # Add cluster nodes 
-// clusterPoints = {"": {x: 0, y: 0}};
-// counter = 0;
-
-// let point
-// switch(layout){
-//     case "default":
-//         point = function(dependentPoint={x: 0, y: 0}, stretch) {
-//             // Returns an object containing x, y position of a cluster given
-//             // if parent node's x, y object is not specified it'll be ignored
-//             if (dependentPoint.x == 0, dependentPoint.y == 0)
-//                 stretch = 1;
-//             else
-//                 stretch = 10/(getNumDigits(cluster) ** 1.4);
-
-//             return {x: dependentPoint.x + Math.cos(Math.random() * tau/2) / Math.min(getNumDigits(cluster), 4),
-//                     y: dependentPoint.y + Math.sin(Math.random() * tau/2) / Math.min(getNumDigits(cluster), 5)};
-//         };
-//         break;
-//     case "tree":
-//         point = function(dependentPoint={x: 0, y: 0}, cluster) {
-//             // Returns an object containing x, y position of a cluster given
-//             // the angle property and parent node's x, y object
-//             // if parent node's x, y object is not specified it'll be ignored
-//             if (dependentPoint.x == 0, dependentPoint.y == 0)
-//                 stretch = 1;
-//             else
-//                 stretch = 10/(getNumDigits(cluster) ** 1.4);
-
-//             let up;
-//             if (dependentPoint.x == 0, dependentPoint.y == 0)
-//                 (cluster == 1 ? true : false)
-//             else
-//                 up = (parseInt(cluster.slice(cluster.length-1)) == 1 ? true : false)
-
-//             return {x: dependentPoint.x +  2 + 2 * Math.random(),
-//                     y: dependentPoint.y +  stretch * (up ? -1 : 1)};
-//         };
-//         break;
-//     case "gold":
-//         point = function()
-
-// }
-
-// const addClusterPoint = function (cluster) {
-//     // Given a cluster id 
-//     // This function adds the cluster to clusterPoints object specifying its x, y position
-//     // As well as every ancestor of that cluster
-//     const parent = cluster.slice(0, cluster.length-1); // Get parent cluster
-    
-//     if(cluster in clusterPoints){}
-
-//     else if (parent in clusterPoints) // if parent is already in clusterPoints
-//         if(parent === "")
-//             clusterPoints[cluster] = point(clusterPoints[parent], cluster);    
-//         else
-//             // Create object relying on parent position
-//             clusterPoints[cluster] = point(clusterPoints[parent], cluster); 
-
-//     else{
-//         // When parent is not in clusterPoints and cluster isnt single digit
-//         addClusterPoint(parent); // Recursively apply function to parent
-
-//         // After that create cluster point relying on parent node
-//         clusterPoints[cluster] = point(clusterPoints[parent], cluster); 
-//     }
-// };
-
-// Add all clusters to clusterPoints
-let clusterPoints = {};
-let ccc = [{x: 0, y: 0, cluster: ""}]
-for(key in data.variables.clusters){
-    cluster = data.variables.clusters[key]
-    loopWhile:
-    while(true){
-    	if(!ccc.some(x => x.cluster == cluster))
-        	ccc.push({x: 0, y: 0, cluster: cluster});
-        cluster = cluster.slice(0, cluster.length-1);
-        if(cluster === "")
-            break loopWhile;
-    }
-}
-
-let L = 0.5; // Spring rest length
-let Kr = 0.1; // repulsive force constant
-let Ks = 0.3; // spring constant
-let deltaT = 1; // time step
-
-let N = ccc.length;
-
-for(let iii=0; iii < 2000; iii++){
-	// Initialize net forces
-	for (key in ccc){
-	    ccc[key].forceX = 0;
-	    ccc[key].forceY = 0;
-	}
-
-	// Repulsion between all pairs
-	let flag = false
-	for(let i1=0; i1 < ccc.length-1; i1++){
-		node1 = ccc[i1];
-		for(let i2=i1+1; i2 < ccc.length; i2++){
-			node2 = ccc[i2];
-			flag = (node2.cluster.slice(0, -1) == node1.cluster.slice(0, -1) ? true : false)
-			dx = node2.x - node1.x;
-			dy = node2.y - node1.y;
-			if (dx != 0 || dy != 0){
-				let distanceSquared = dx ** 2 + dy ** 2;
-				let distance = Math.sqrt(distanceSquared);
-				let force = Kr / distanceSquared;
-				let fx = force * dx / distance;
-				let fy = force * dy / distance;
-				node1.forceX = node1.forceX - fx;
-				node1.forceY = node1.forceY - fy;
-				node2.forceX = node2.forceX + fx;
-				node2.forceY = node2.forceY + fy;
-			}
-			else if(dx == 0 && dy == 0){
-				node1.forceX = Math.random() * 0.1;
-				node1.forceY = Math.random() * 0.1;
-				node2.forceX = Math.random() * 0.1;
-				node2.forceY = Math.random() * 0.1;
-			}
-		}
-	}
-
-	// Spring force between adjacent pairs 
-	for(let i1=0; i1 < ccc.length; i1++){
-		node1 = ccc[i1];
-		for(let i2=0; i2 < ccc.length; i2++){
-			// If two not neighbors continue
-			if (!(node1.cluster.slice(0, cluster.length-1) == ccc[i2].cluster
-				|| ccc[i2].cluster.slice(0, cluster.length-1) == node1.cluster))
-				continue;
-
-			node2 = ccc[i2];
-			if (i1 < i2){
-				let dx = node2.x - node1.x;
-				let dy = node2.y - node1.y;
-				if(dx != 0 || dy != 0){
-					let distance = (dx ** 2 + dy ** 2);
-					let force = Ks * (distance - L);
-					let fx = force * dx / distance;
-					let fy = force * dy / distance;
-					node1.forceX = node1.forceX + fx;
-					node1.forceY = node1.forceY + fy;
-					node2.forceX = node2.forceX - fx;
-					node2.forceY = node2.forceY - fy;
-				}
-			}
-		}
-	}
-	
-	// Update positions
-	for(let i=0; i < N; i++){
-	node = ccc[i];
-	let dx = deltaT * node.forceX;
-	let dy = deltaT * node.forceY;
-	let displacementSquared = dx ** 2 + dy ** 2;
-	if (displacementSquared > 1000){
-		let s = Math.sqrt(1000/displacementSquared)
-		dx = dx * s
-		dy = dy * s
-	}
-	node.x = node.x + dx;
-	node.y = node.y + dy;
-	}
-}
-
-for(let i=0; i < ccc.length; i++){
-	cluster = ccc[i];
-	clusterPoints[cluster.cluster] = {x: cluster.x, y: cluster.y};
-}
-
+clusterPoints = forceDirectedLayout()
 
 const addNode = function(cluster){
     // Given a cluster id, adds it to g.nodes
@@ -275,22 +98,6 @@ const addNode = function(cluster){
     hidden: hidden
     });    
 }
-
-
-// // Add all clusters to clusterPoints
-// for(key in data.variables.clusters){
-//     cluster = data.variables.clusters[key]
-
-//     counter += 1;
-
-//     loopWhile:
-//     while(true){
-//         addClusterPoint(cluster);
-//         cluster = cluster.slice(0, cluster.length-1);
-//         if(cluster === "")
-//             break loopWhile;
-//     }
-// }
 
 
 // Add all clusters to g.nodes
@@ -654,17 +461,17 @@ document.getElementById("visibility").onclick = function() {
 
 document.getElementById("graphInfo").onclick = function() {
     string = `<h1 style="text-align:left;  text-shadow: 2px 2px ${coloring.boxTextShadow};">
-         Controls:</h1>
+         &emsp;Controls:</h1>
 
          <h2 style="text-align:center;">         
-         Hold 'Ctrl' key and click node:&emsp;View node info without
+         &emsp;Hold 'Ctrl' key and click node:&emsp;View node info without
          clearing the info box<br><br>
 
          Hold 'Shift' key and click cluster:&emsp;Stop toggling visibility.
          </h2>
 
          <h1 style="text-align:left; text-shadow: 2px 2px ${coloring.boxTextShadow};">
-         Numbers:</h1>
+         &emsp;Numbers:</h1>
          <h2 style="text-align:center;">
 		 Number of nodes:&emsp;${data.variables.nodeNum}<br>
 		 Number of clusters:&emsp;${data.variables.numClusters}
@@ -715,7 +522,7 @@ let s = new sigma({
         zoomingRatio: 2,
 
         verbose: true,
-        scalingMode: scalingMode
+        scalingMode: "inside"
     },
 });
 
@@ -732,7 +539,7 @@ s.addRenderer({
         edgeHoverSizeRatio: 2,
         hideEdgesOnMove: true,
 
-        labelThreshold: 7,
+        labelThreshold: 10,
         defaultLabelColor: coloring.labelColor,
 
         font: "monospace",

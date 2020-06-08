@@ -176,25 +176,31 @@ class Graph:
         """ Gets friends of users and adds them to self.nodes"""
         # nodeList = list(self.collectUnexplored())  # Look up these nodes
         nodeList = list(self.getLeafIds())
-        limit = api.rate_limit_status()["resources"]['users']['/users/lookup']['remaining']
+        # limit = api.rate_limit_status()["resources"]['users']['/users/lookup']['remaining']
 
         if len(nodeList) == 0:
             return
 
-        for _ in range(len(nodeList) // 100):
-            users = api.lookup_users(nodeList[0:100])
-            for user in users:
-                if user.id not in self.nodes:
-                    self.nodes.update({user.id: Node(user)})
-            nodeList = nodeList[100:]
-
-            limit += -1
-            if limit == 1:
-                break
-        else: # This else is visited after the for finishes and when it doesnt encounter a 'break'
-            users = api.lookup_users(nodeList)
-            for user in users:
+        users = api.lookup_users(nodeList[0:100])
+        for user in users:
+            if user.id not in self.nodes:
                 self.nodes.update({user.id: Node(user)})
+
+        # for _ in range(len(nodeList) // 100):
+        #     users = api.lookup_users(nodeList[0:100])
+        #     for user in users:
+        #         if user.id not in self.nodes:
+        #             self.nodes.update({user.id: Node(user)})
+        #     nodeList = nodeList[100:]
+        #
+        #     limit += -1
+        #     if limit == 1:
+        #         break
+        # else:
+        #     users = api.lookup_users(nodeList)
+        #     for user in users:
+        #         if user.id not in self.nodes:
+        #             self.nodes.update({user.id: Node(user)})
 
     def listSearch_graph(self, api, depth=5):
         """
