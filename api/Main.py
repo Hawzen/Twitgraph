@@ -99,9 +99,3 @@ elif args.selector == "visualize":
 
 else:
     print(args.selector)
-#
-# import shelve
-# with shelve.open("shelve/graph_shelve", "c") as sh:
-#     with shelve.open("shelve/old", "c") as sh2:
-#         sh["graph"] = sh2["graph"]
-#         sh["_KSU"] = sh2["_KSU"]
