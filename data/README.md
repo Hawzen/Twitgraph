@@ -1,1 +1,2 @@
-### Data.json file should be here after executing the python code in directory api
+### After executing a visualization command using api\Main.py, 'data.json' should be here.
+### The file 'configurations.json' should hold all the themes
