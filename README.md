@@ -53,7 +53,7 @@ The thing to note is that the graph shows connections between **clusters**, so a
 
     optional arguments:
       -h, --help    show this help message and exit
-      -d, --delete  Delete all information of a\an handle\s
+      -d, --delete  Delete all information of a handle or more
 
 
 
