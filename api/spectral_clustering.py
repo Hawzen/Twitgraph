@@ -94,6 +94,7 @@ def spectral(A):
             labels[i] = 2
     return labels
 
+### Unused functions
 
 def createLaplacian(A: np.ndarray) -> np.ndarray:
     """Given adjacency matrix return Laplacian Matrix"""
@@ -129,31 +130,3 @@ def getEigenvec(L: np.ndarray) -> np.ndarray:
             temp[i] = 5  # The number is an arbitrary choice, read 'Note' in function docstring
 
     return temp
-
-
-"""
-import matplotlib.pyplot as plt
-from sklearn.cluster import KMeans, spectral_clustering
-
-crnt = 0
-
-    x = KMeans(2).fit(np.reshape(vec, (-1, 1)))
-    with open("log\gext.txt", "a") as file:
-        file.write(str(x.labels_))
-        file.write("\n")
-
-    labels = x.labels_
-    for i, el in enumerate(labels):
-        if el == 0:
-            labels[i] = 1
-        elif el == 1:
-            labels[i] = 2
-
-    # global crnt
-    # fig, axes = plt.subplots(3, 3)
-    # for vect, axis in zip(vecs, np.reshape(axes, 9)):
-    #     axis.scatter(vect, [0] * len(vec))
-    # fig.savefig("pics\{}_{}_{}.png".format(len(vec), vals[index], crnt))
-    # crnt += 1
-    # plt.clf()
-"""
