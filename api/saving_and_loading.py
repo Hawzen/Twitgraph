@@ -72,7 +72,7 @@ def deleteShelveKey(screenName):
 
 
 def saveShelve(screenName, graph: Graph, dumb=False, onlyDone=True, numNodes=0,
-               numPartitions=0, theme="default", layout="default"):
+               numPartitions=0, theme="default", layout="forceDirectedLayout"):
     """Saves graph object to shelve as well as dumb the data to data.json if dumb=True"""
     if not exists('shelve'):
         makedirs('shelve')
@@ -143,7 +143,10 @@ def modifyConfig(theme, layout):
     coloring = conTheme.get("coloring", defTheme["coloring"])
     edges = conTheme.get("edges", defTheme["edges"])
 
-    layout = layout if config["layouts"].index(layout) != -1 else "default"
+    try:
+        config["layouts"].index(layout)
+    except ValueError:
+        layout = "forceDirectedLayout"
 
     newConfig = {string: var for string, var in zip(["constants", "coloring", "layout", "edges"],
                                                     [constants, coloring, layout, edges])}

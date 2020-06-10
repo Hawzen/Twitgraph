@@ -124,8 +124,7 @@
 
     "layouts": 
         [
-        "default",
-        "tree"
+        "forceDirectedLayout"
         ]
     
 }

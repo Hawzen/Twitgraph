@@ -53,7 +53,14 @@ let g = {
     edges: []
 };
 
-clusterPoints = forceDirectedLayout()
+
+try{
+    clusterPoints = eval(`${config.layout}()`)
+}
+catch(ReferenceError){
+    clusterPoints = forceDirectedLayout()
+}
+
 
 const addNode = function(cluster){
     // Given a cluster id, adds it to g.nodes
@@ -476,6 +483,14 @@ document.getElementById("graphInfo").onclick = function() {
 		 Number of nodes:&emsp;${data.variables.nodeNum}<br>
 		 Number of clusters:&emsp;${data.variables.numClusters}
 		 </h2>
+
+         <h1 style="text-align:left; text-shadow: 2px 2px ${coloring.boxTextShadow};">
+         &emsp;References</h1>
+         <h3 style="text-align:left;">
+         von Luxburg, U. A tutorial on spectral clustering. Stat Comput 17, 395-416 (2007). https://doi.org/10.1007/s11222-007-9033-z
+         <br><br>
+         McGuffin, M.J. (2012). Simple algorithms for network visualization: A tutorial. Tsinghua Science & Technology, 17, 383-398.
+         </h3>
          `
     addbox(false, string);
     keepDetails = true;

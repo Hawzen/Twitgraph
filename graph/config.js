@@ -32,7 +32,7 @@ let config =
                 "boxTextShadow": "rgb(44, 103, 5, 0.2)",
                 "labelColor": "black"
         },
-        "layout": "default",
+        "layout": "forceDirectedLayout",
         "edges": {
                 "nodeEdges": "line",
                 "clusterEdges": "dashed"

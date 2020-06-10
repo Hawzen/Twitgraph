@@ -26,7 +26,7 @@ keyParser = subParsers.add_parser("getkeys", description="List and/or delete key
 # keyParser.add_argument("-H", "--handle", dest="screen_names", action="append", nargs="+", metavar="Handle",
 #                        help=handlestring)
 keyParser.add_argument("-d", "--delete", dest="deleteSome", action="store_true",
-                       help="Delete all information of a\\an handle\s")
+                       help="Delete all information of a handle or more")
 
 # Show data
 showParse = subParsers.add_parser("show", description="Print contents of one or more handles")
@@ -99,3 +99,4 @@ elif args.selector == "visualize":
 
 else:
     print(args.selector)
+
