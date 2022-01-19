@@ -47,7 +47,6 @@ visualParse.add_argument("-t", "--theme", dest="theme", metavar="Theme", default
 visualParse.add_argument("-l", "--layout", dest="layout", metavar="Layout", default="default",
                          help="Layout of (x, y) positions of nodes in the graph")
 
-# ["visualize", "-Hgraph", "-n 500", "-p 50", "-truby", "-ldefault"]
 args = parser.parse_args()
 
 if args.selector is None:
