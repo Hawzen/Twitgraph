@@ -55,9 +55,12 @@ let g = {
 
 
 try{
-    clusterPoints = eval(`${config.layout}()`)
+    // clusterPoints = eval(`${config.layout}()`)
+    clusterPoints = laidout_data
+    // asds
 }
 catch(ReferenceError){
+    // alert("Didnt work")
     clusterPoints = forceDirectedLayout()
 }
 
@@ -534,7 +537,7 @@ let s = new sigma({
 
         zoomMin: 0.001,
         zoomMax: 5,
-        zoomingRatio: 2,
+        zoomingRatio: 1.3,
 
         verbose: true,
         scalingMode: "inside"
@@ -617,6 +620,11 @@ s.bind('clickNode', function(e) {
 	nodegraph.active = true;
 	keepDetails = true;
 
+    try{
+        console.log(current.json.screen_name);
+    }
+    catch(TypeError){}
+    
     if (nodegraph.id.includes("c") && !e.data.captor.shiftKey)
         toggleVisibility(nodegraph.id);
     

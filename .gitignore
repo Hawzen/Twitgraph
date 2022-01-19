@@ -5,3 +5,5 @@ twitterkeys.txt
 api/shelve/
 Test.ipynb
 data/data.json
+build/
+node_modules/

@@ -15,9 +15,9 @@ function forceDirectedLayout(){
 	}
 
 	let L = 0.5; // Spring rest length
-	let Kr = 0.1; // repulsive force constant
+	let Kr = 0.2; // repulsive force constant
 	let Ks = 0.3; // spring constant
-	let deltaT = 0.8; // time step
+	let deltaT = 1; // time step
 
 	let N = ccc.length;
 
@@ -105,5 +105,6 @@ function forceDirectedLayout(){
 		clusterPoints[cluster.cluster] = {x: cluster.x, y: cluster.y};
 	}
 
+	console.log(JSON.stringify(clusterPoints))
 	return clusterPoints;
 }
