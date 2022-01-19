@@ -56,8 +56,8 @@ let g = {
 
 try{
     // clusterPoints = eval(`${config.layout}()`)
-    clusterPoints = laidout_data
-    // asds
+    // clusterPoints = laidout_data
+    errorme
 }
 catch(ReferenceError){
     // alert("Didnt work")
