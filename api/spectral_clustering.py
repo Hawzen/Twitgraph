@@ -8,56 +8,46 @@ from warnings import filterwarnings
 filterwarnings("ignore", "Graph is not fully connected, spectral embedding")
 
 
-def getClusters(nodes: dict, numPartitions: int = 2) -> dict:
-    """" Takes in a dictionary of nodes {ID: nodeObject} and a number of partitions.
-         Returns a dictionary mapping of every node and its cluster {ID: cluster} using the spectral clustering
-          algorithm.
-
-          Example: The function applies spectral clustering at the biggest cluster of nodes numPartitions time,
-          e.g. numPartition=3, [n1, n2, n3, n4, n5] -> [n1, n2 | n3, n4, n4] -> [n1, n2 | n3, | n4, n5]
-
-         Notes:
-            Each time the algorithm preforms a clustering, it makes the Adjacency Matrix and the Laplacian Matrix
-                again, as well as getting the eigenvectors and values, so the performance is slow on higher numPartition
-            The algorithm is implemented for symmetric matrices, so the direction-ess of the graph is ignored
-            Each cluster has a unique id identifying it, and gives an easy way to look at its ancestors,
-                e.g. 12 -> belongs to the first cluster and to the second cluster
-                     1 -> belongs to the first cluster
-                     211 -> belongs to the second cluster, the first sub cluster and the first sub-sub cluster"""
-
+def getClusters(nodes: dict, n_clusters:int=8) -> dict:
+    """ Takes in a dictionary of nodes {ID: nodeObject} and a number of n_clusterss.
+        Returns a dictionary mapping of every node and its cluster {ID: cluster} using the spectral clustering
+            algorithm.
+    """
     nodesToClusters = {}
     for node in nodes.values():
         if node.user.protected:
-            nodesToClusters[node.id] = 4
+            nodesToClusters[node.id] = -1
 
     for Id in nodesToClusters.keys():
         nodes.pop(Id)
 
-    clusters = []  # Clusters is a python list to allow variable length integers
+    # clusters = []  # Clusters is a python list to allow variable length integers
 
-    for i in range(numPartitions - 1):
-        if i == 0:
-            clusters = list((spectral(createAdjacency(nodes))))
-            continue
+    # for i in range(numPartitions - 1):
+    #     if i == 0:
+    #         clusters = list((spectral(createAdjacency(nodes))))
+    #         continue
 
-        # Sort then group clusters by num. of members
-        frequency = {key: len(tuple(group)) for key, group in groupby(sorted(clusters)) if "5" not in str(key)}
-        maximum = max(frequency.values())
-        for key, freq in frequency.items():
-            if freq == maximum:
-                cluster = key  # Use 'cluster' to select biggest cluster
+    #     # Sort then group clusters by num. of members
+    #     frequency = {key: len(tuple(group)) for key, group in groupby(sorted(clusters)) if "5" not in str(key)}
+    #     maximum = max(frequency.values())
+    #     for key, freq in frequency.items():
+    #         if freq == maximum:
+    #             cluster = key  # Use 'cluster' to select biggest cluster
 
-        # Split nodes that belong to 'cluster' into two clusters
-        vec = (spectral(createAdjacency(nodes, tuple(cluster == x for x in clusters))))
+    #     # Split nodes that belong to 'cluster' into two clusters
+    #     vec = (spectral(createAdjacency(nodes, tuple(cluster == x for x in clusters))))
 
-        # Update all new clustered elements from vec to clusters
-        cnt = 0
-        for index, el in enumerate(clusters):
-            if el == cluster:
-                clusters[index] = int(str(clusters[index]) + str(vec[cnt]))
-                cnt += 1
+    #     # Update all new clustered elements from vec to clusters
+    #     cnt = 0
+    #     for index, el in enumerate(clusters):
+    #         if el == cluster:
+    #             clusters[index] = int(str(clusters[index]) + str(vec[cnt]))
+    #             cnt += 1
 
-    for Id, cluster in zip(nodes, clusters):
+    node_clusters =  spectral_clustering(createAdjacency(nodes), n_clusters=n_clusters)
+
+    for Id, cluster in zip(nodes, node_clusters):
         nodesToClusters.update({Id: int(cluster)})
     return nodesToClusters
 

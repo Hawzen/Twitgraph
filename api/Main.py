@@ -40,7 +40,7 @@ visualParse = subParsers.add_parser("visualize", description="Visualize graph")
 visualParse.add_argument("-H", "--handle", dest="screen_name", metavar="Handle", required=True, help=handlestring)
 visualParse.add_argument("-n", "--nodenum", dest="nodeNum", metavar="Node Number", type=int, default=0,
                          help="Number of nodes visualized (default for all nodes)")
-visualParse.add_argument("-p", "--partitionnum", dest="partitionNum", metavar="Partition Number", type=int, default=0,
+visualParse.add_argument("-p", "--n_clusters", dest="n_clusters", metavar="Partition Number", type=int, default=0,
                          help="Number of times data is partitioned (default for 0.1 of node number)")
 visualParse.add_argument("-t", "--theme", dest="theme", metavar="Theme", default="default",
                          help="Visual style of graph")
@@ -93,7 +93,7 @@ elif args.selector == "show":
 
 elif args.selector == "visualize":
     saveShelve(args.screen_name, loadGraph(args.screen_name), dump=True, onlyDone=True, numNodes=args.nodeNum,
-               numPartitions=args.partitionNum, theme=args.theme, layout=args.layout)
+               n_clusters=args.n_clusters, theme=args.theme, layout=args.layout)
     print(f"Copy and paste thins link to a browser to see the visualization {str(abspath('../index.html'))}")
 
 else:

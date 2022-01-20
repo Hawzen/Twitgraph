@@ -75,7 +75,7 @@ def deleteShelveKey(screenName):
 
 
 def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
-               numPartitions=0, theme="default", layout="forceDirectedLayout"):
+               n_clusters=0, theme="default", layout="forceDirectedLayout"):
     """Saves graph object to shelve as well as dump the data to data.json if dump=True"""
     # if not exists('shelve'):
     #     makedirs('shelve')
@@ -93,8 +93,8 @@ def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
         # Default node, partition values
         if numNodes == 0:
             numNodes = sum(1 for Id in graph.nodes.keys() if any(graph.nodes[Id].done))
-        if numPartitions == 0:
-            numPartitions = numNodes // 10 if numNodes > 20 else 2
+        if n_clusters == 0:
+            n_clusters = min(numNodes // 10, 20)
 
         # Check numNodes
         if onlyDone:
@@ -115,7 +115,7 @@ def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
             cutNodes.update({node.id: node})
 
         # {Id: cluster node belongs to}
-        clusters = getClusters(cutNodes, numPartitions)
+        clusters = getClusters(cutNodes, n_clusters)
 
         # {cluster: num nodes in cluster}
         clusterSizes = \
@@ -168,7 +168,7 @@ def _saveJSON(graph: Graph, clusters=None, clusterSizes=None):
     JSON = {}
 
     # Sorted clusters
-    clustersTuple = sorted(list(set(clusters.values())), key=lambda x: -1 / x if str(x)[0] == "1" else x)
+    clustersTuple = sorted(set(clusters.values()))
     clustersTuple = tuple(map(lambda x: str(x), clustersTuple))
 
     # initialize JSON with nodeNum, doneNum and origin values
