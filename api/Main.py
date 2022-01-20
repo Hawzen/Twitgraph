@@ -64,12 +64,12 @@ elif args.selector == "collect":
             newName = True
 
     # Check API
-    warn("\nMake sure to have your:\n\tapiKey,\n\tapiSecretKey,\n\taccessToken,\n\taccessTokenSecret\nin a "
-         "file named twitterkeys.txt on the same level as this file", category=Warning)
+    print("\nMake sure to have your:\n\tapiKey,\n\tapiSecretKey,\n\taccessToken,\n\taccessTokenSecret\nin a "
+         "file named twitterkeys.txt on the same level as this file")
 
     api, graph = loadAll(args.screen_name, newName)
     automate(args.screen_name, graph, api, args.enum, args.quiet)
-    saveShelve(args.screen_name, graph, dumb=False, onlyDone=True)
+    saveShelve(args.screen_name, graph, dump=False, onlyDone=True)
 
 elif args.selector == "getkeys":
     for screenName in getShelveKeys():
@@ -92,7 +92,7 @@ elif args.selector == "show":
         graph.display(num=10 if args.peek else 0, depth=5)
 
 elif args.selector == "visualize":
-    saveShelve(args.screen_name, loadGraph(args.screen_name), dumb=True, onlyDone=True, numNodes=args.nodeNum,
+    saveShelve(args.screen_name, loadGraph(args.screen_name), dump=True, onlyDone=True, numNodes=args.nodeNum,
                numPartitions=args.partitionNum, theme=args.theme, layout=args.layout)
     print(f"Copy and paste thins link to a browser to see the visualization {str(abspath('../index.html'))}")
 

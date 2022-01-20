@@ -1,18 +1,24 @@
-from graph import Graph
-from spectral_clustering import getClusters
-import tweepy
 import shelve
 import json
 from os.path import exists
 from os import makedirs
 import sys
+import pickle
+from typing import overload
 
+import tweepy
+from redis import Redis
+
+from graph import Graph
+from database import *
+from spectral_clustering import getClusters
+
+db = RedisShelve("twitgraph", db=1)
 
 def loadGraph(screenName):
-    with shelve.open("shelve/graph_shelve", "r") as sh:
-        graph = sh[screenName]
-    return graph
-
+    if screenName in db:
+        return db[screenName]
+    raise KeyError()
 
 def loadAPI():
     with open('twitterkeys.txt', 'r') as file:
@@ -56,31 +62,31 @@ def loadAll(screenName, newName=False):
 
 def getShelveKeys():
     """returns a list of keys (profiles) stored inside shelve"""
-    if not exists('shelve'):
-        makedirs('shelve')
-
-    with shelve.open("shelve/graph_shelve", "c") as sh:
-        return list(sh.keys())
+    return db.keys()
 
 
 def deleteShelveKey(screenName):
     if screenName not in getShelveKeys():
         raise KeyError
 
-    with shelve.open("shelve/graph_shelve", "w") as sh:
-        del sh[screenName]
+    # with shelve.open("shelve/graph_shelve", "w") as sh:
+    #     del sh[screenName]
+    del db[screenName]
 
 
-def saveShelve(screenName, graph: Graph, dumb=False, onlyDone=True, numNodes=0,
+def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
                numPartitions=0, theme="default", layout="forceDirectedLayout"):
-    """Saves graph object to shelve as well as dumb the data to data.json if dumb=True"""
-    if not exists('shelve'):
-        makedirs('shelve')
+    """Saves graph object to shelve as well as dump the data to data.json if dump=True"""
+    # if not exists('shelve'):
+    #     makedirs('shelve')
 
-    with shelve.open("shelve/graph_shelve", "c") as sh:
-        sh[screenName] = graph
+    # with shelve.open("shelve/graph_shelve", "c") as sh:
+    #     sh[screenName] = graph
 
-    if dumb:
+    db[screenName] = graph
+    db.bgsave()
+
+    if dump:
 
         graph.fullEdgeSearch(numNodes)
 
@@ -184,8 +190,8 @@ def _saveJSON(graph: Graph, clusters=None, clusterSizes=None):
 
     # Add nodes in graph into JSON
 
-    for Id in clusters.keys():
-        node = graph.nodes[Id]
+    for id_ in clusters.keys():
+        node = graph.nodes[id_]
         if node.id == graph.origin.id:
             continue
 
@@ -194,7 +200,7 @@ def _saveJSON(graph: Graph, clusters=None, clusterSizes=None):
                  {"edges": tuple(str(edge) for edge in node.edges),
                   "json": node.user._json,
                   "done": str(node.done),
-                  "cluster": str(clusters[Id])
+                  "cluster": str(clusters[id_])
                   }
              })
 
