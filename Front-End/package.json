@@ -4,12 +4,13 @@
   "description": "Front-End for TwitGraph",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "browserify graph/script.js > graph/bundle.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "graphology": "^0.23.2",
-    "sigma": "^2.1.3"
+    "sigma": "^1.2.1"
   }
 }
