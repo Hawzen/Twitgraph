@@ -15,7 +15,7 @@ let counter, counter2, current, id, node, index, origin, temp, name,
 // # Initialize constants
 const nodeKeys = Object.keys(data.nodes);
 const info = document.getElementById("info");
-const tau = 2*Math.PI;
+const tau = 2 * Math.PI;
 const maxCluster = Math.max.apply(Math, Object.values(data.variables.clusterSizes))
 
 // # Load config settings
@@ -139,23 +139,18 @@ const getClusterEdge = function(cluster) {
 
 let check = [];
 
-g.edges.push({
-	id: "e_c_c1",
-	source: "c",
-	target: "c1",
-	size: constants.edgeSize * 4,
-	color: coloring.clusterEdge,
-	type: config.edges.clusterEdges
-})
-
-g.edges.push({
-	id: "e_c_c2",
-	source: "c",
-	target: "c2",
-	size: constants.edgeSize * 4,
-	color: coloring.clusterEdge,
-	type: config.edges.clusterEdges
-})
+// Add edge from each length 1 cluster (e.g. c1, c2, c3) to origin cluster c
+data.variables.clusters.forEach((c) => {
+    if(c.length == 1)
+        g.edges.push({
+            id: "e_c_c" + c,
+            source: "c",
+            target: "c" + c,
+            size: constants.edgeSize * 4,
+            color: coloring.clusterEdge,
+            type: config.edges.clusterEdges
+        })
+})    
 
 for(key in data.variables.clusters){
     cluster = data.variables.clusters[key];
@@ -214,8 +209,6 @@ for (node in data.nodes){
         color: coloring.active,
         hidden: true
     });
-    // console.log( Math.sin(angle) *
-    //     	(data.variables.clusterSizes[current.cluster] / maxCluster * constants.nodeStretch))
     clusterSizes[current.cluster] += -1;
 }
 
@@ -231,19 +224,13 @@ originSettings = {
     id: origin.json.id_str,
     label: origin.json.name,
 	x: clusterPoints[origin.cluster].x,
-	// + Math.cos(angle) * (data.variables.clusterSizes[origin.cluster] / maxCluster + constants.nodeStretch),
 
 	y: clusterPoints[origin.cluster].y, 
-	// + Math.sin(angle) * (data.variables.clusterSizes[origin.cluster] / maxCluster + constants.nodeStretch),
 
 	size: data.variables.clusterSizes[origin.cluster]/maxCluster * constants.clusterSize * 1.1,
     color: coloring.origin,
     hidden: true
     }
-// console.log(Math.cos(angle) *
-// 		(data.variables.clusterSizes[origin.cluster] / maxCluster + constants.nodeStretch),
-// 		clusterPoints[origin.cluster].y + Math.sin(angle) *
-// 		(data.variables.clusterSizes[origin.cluster] / maxCluster + constants.nodeStretch))
 index = g.nodes.findIndex(node => node.id == origin.json.id_str);
 g.nodes[index] = originSettings;
 
