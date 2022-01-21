@@ -46,6 +46,9 @@ visualParse.add_argument("-t", "--theme", dest="theme", metavar="Theme", default
                          help="Visual style of graph")
 visualParse.add_argument("-l", "--layout", dest="layout", metavar="Layout", default="default",
                          help="Layout of (x, y) positions of nodes in the graph")
+visualParse.add_argument("-a", "--algorithm", dest="algorithm", metavar="algorithm", default="HDBSCAN",
+                         help="Choice of algorithm (spectral_clustering, HDBSCAN)")
+
 
 args = parser.parse_args()
 
@@ -69,7 +72,7 @@ elif args.selector == "collect":
 
     api, graph = loadAll(args.screen_name, newName)
     automate(args.screen_name, graph, api, args.enum, args.quiet)
-    saveShelve(args.screen_name, graph, dump=False, onlyDone=True)
+    saveShelve(args.screen_name, graph, dump=False, onlyDone=True, algorithm=args.algorithm)
 
 elif args.selector == "getkeys":
     for screenName in getShelveKeys():
@@ -93,7 +96,7 @@ elif args.selector == "show":
 
 elif args.selector == "visualize":
     saveShelve(args.screen_name, loadGraph(args.screen_name), dump=True, onlyDone=True, numNodes=args.nodeNum,
-               n_clusters=args.n_clusters, theme=args.theme, layout=args.layout)
+               n_clusters=args.n_clusters, theme=args.theme, layout=args.layout, algorithm=args.algorithm)
     print(f"Copy and paste thins link to a browser to see the visualization {str(abspath('../index.html'))}")
 
 else:

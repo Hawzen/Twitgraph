@@ -7,3 +7,4 @@ Test.ipynb
 data/data.json
 build/
 node_modules/
+api/dump.rdb

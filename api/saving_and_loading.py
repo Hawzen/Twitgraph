@@ -11,7 +11,7 @@ from redis import Redis
 
 from graph import Graph
 from database import *
-from spectral_clustering import getClusters
+from clustering import myHDBSCAN, mySpectralClustering
 
 db = RedisShelve("twitgraph", db=1)
 
@@ -75,14 +75,8 @@ def deleteShelveKey(screenName):
 
 
 def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
-               n_clusters=0, theme="default", layout="forceDirectedLayout"):
+               n_clusters=0, theme="default", layout="forceDirectedLayout", algorithm="spectral_algorithm"):
     """Saves graph object to shelve as well as dump the data to data.json if dump=True"""
-    # if not exists('shelve'):
-    #     makedirs('shelve')
-
-    # with shelve.open("shelve/graph_shelve", "c") as sh:
-    #     sh[screenName] = graph
-
     db[screenName] = graph
     db.bgsave()
 
@@ -114,19 +108,32 @@ def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
             i += 1
             cutNodes.update({node.id: node})
 
-        # {Id: cluster node belongs to}
-        clusters = getClusters(cutNodes, n_clusters)
-
-        # {cluster: num nodes in cluster}
-        clusterSizes = \
-            dict(
-                map(
-                    lambda x: (str(x), sum(1 for el in clusters.values() if el == x)), set(clusters.values())
+        if algorithm == "spectral_clustering":
+            clusters = mySpectralClustering(cutNodes, n_clusters)
+            clusterSizes = \
+                dict(
+                    map(
+                        lambda x: (str(x), sum(1 for el in clusters.values() if el == x)), set(clusters.values())
+                    )
                 )
-            )
+            modifyConfig(theme, layout)
+            dumpData(_saveJSON(graph, clusters=clusters, clusterSizes=clusterSizes, algorithm="spectral_clustering"))
+            return
 
-        modifyConfig(theme, layout)
-        dumpData(_saveJSON(graph, clusters, clusterSizes))
+        elif algorithm == "HDBSCAN":
+            clusters, cluster_edges = myHDBSCAN(cutNodes, n_clusters)
+            clusterSizes = \
+                dict(
+                    map(
+                        lambda x: (str(x), sum(1 for el in clusters.values() if el == x)), set(clusters.values())
+                    )
+                )
+
+            modifyConfig(theme, layout)
+            dumpData(_saveJSON(graph, clusters=clusters, cluster_edges=cluster_edges, clusterSizes=clusterSizes, algorithm="HDBSCAN"))
+            return
+    
+    raise NotImplementedError(f"Algorithm {algorithm} is not implemeneted yet")
 
 
 def dumpData(JSON):
@@ -163,7 +170,7 @@ def modifyConfig(theme, layout):
         file.flush()
 
 
-def _saveJSON(graph: Graph, clusters=None, clusterSizes=None):
+def _saveJSON(graph: Graph, clusters=None, cluster_edges=None, clusterSizes=None, algorithm="spectral_clustering"):
     """Creates a JSON containing data from clusters and clusterSizes"""
     JSON = {}
 
@@ -175,13 +182,15 @@ def _saveJSON(graph: Graph, clusters=None, clusterSizes=None):
     JSON.update({
         "variables": {
             "nodeNum": len(clusters.keys()),
-            # "doneNum": graph.getDoneNum(),
             "clusters": clustersTuple,
             "numClusters": len(clustersTuple),
-            "clusterSizes": {} if clusterSizes is None else clusterSizes
+            "clusterEdges": {} if cluster_edges is None else cluster_edges,
+            "clusterSizes": {} if clusterSizes is None else clusterSizes,
+            "algorithm": algorithm
         },
         "nodes": {},
-        "origin": {"edges": tuple(str(edge) for edge in graph.nodes[graph.origin.id].edges),
+        "origin": {
+                   "edges": tuple(str(edge) for edge in graph.nodes[graph.origin.id].edges),
                    "json": graph.nodes[graph.origin.id].user._json,
                    "done": str(graph.nodes[graph.origin.id].done),
                    "cluster": str(clusters[graph.origin.id])
