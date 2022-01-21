@@ -1,3 +1,5 @@
+// Import Packages
+let sigma = require("sigma")
 // ### Initialize data JSON
 data.nodes = Object.fromEntries(Object.entries(data['nodes']));
 data.nodes[data.origin.json.id_str] = data.origin;
