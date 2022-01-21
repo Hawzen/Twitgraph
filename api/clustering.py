@@ -27,12 +27,12 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
     nodesToClusters = {}
     for node in nodes.values():
         if node.user.protected:
-            nodesToClusters[node.id] = 4
+            nodesToClusters[node.id] = -1
 
-    for Id in nodesToClusters.keys():
-        nodes.pop(Id)
+    for id_ in nodesToClusters.keys():
+        nodes.pop(id_)
 
-    clusters = []  # Clusters is a python list to allow variable length integers
+    # clusters = []  # Clusters is a python list to allow variable length integers
 
     for i in range(numPartitions - 1):
         if i == 0:
@@ -40,14 +40,11 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
             continue
 
         # Sort then group clusters by num. of members
-        frequency = {key: len(tuple(group)) for key, group in groupby(sorted(clusters)) if "5" not in str(key)}
-        maximum = max(frequency.values())
-        for key, freq in frequency.items():
-            if freq == maximum:
-                cluster = key  # Use 'cluster' to select biggest cluster
-
+        frequency = {key: len(tuple(group)) for key, group in groupby(sorted(clusters))}
+        cluster = max(frequency, key=frequency.get)
+        
         # Split nodes that belong to 'cluster' into two clusters
-        vec = (spectral(createAdjacency(nodes, tuple(cluster == x for x in clusters))))
+        vec = spectral(createAdjacency(nodes, tuple(cluster == x for x in clusters)))
 
         # Update all new clustered elements from vec to clusters
         cnt = 0
@@ -70,7 +67,12 @@ def myHDBSCAN(nodes, numPartitions):
     for Id in nodesToClusters.keys():
         nodes.pop(Id)
 
-    hdb = HDBSCAN(min_cluster_size=5)
+    hdb = HDBSCAN(
+        min_cluster_size=5,
+        cluster_selection_epsilon=1, 
+        cluster_selection_method="leaf",
+        metric="manhattan",
+    )
 
     for i in range(2 - 1):
         if i == 0:
@@ -147,12 +149,7 @@ def createAdjacency(nodes: dict, selectors: tuple = None) -> np.ndarray:
 
 
 def spectral(A):
-    labels = spectral_clustering(A, n_clusters=2)
-    for i, el in enumerate(labels):
-        if el == 0:
-            labels[i] = 1
-        elif el == 1:
-            labels[i] = 2
+    labels = spectral_clustering(A, n_clusters=8)
     return labels
 
 ### Unused functions
