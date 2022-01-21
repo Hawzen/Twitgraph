@@ -9,3 +9,4 @@ build/
 node_modules/
 api/dump.rdb
 graph/script.js
+graph/bundle.js
