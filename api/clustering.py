@@ -27,7 +27,7 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
     nodesToClusters = {}
     for node in nodes.values():
         if node.user.protected:
-            nodesToClusters[node.id] = -1
+            nodesToClusters[node.id] = -99
 
     for id_ in nodesToClusters.keys():
         nodes.pop(id_)
@@ -79,7 +79,7 @@ def myHDBSCAN(nodes, numPartitions):
     nodesToClusters = {}
     for node in nodes.values():
         if node.user.protected:
-            nodesToClusters[node.id] = -1
+            nodesToClusters[node.id] = -99
 
     for Id in nodesToClusters.keys():
         nodes.pop(Id)

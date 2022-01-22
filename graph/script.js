@@ -62,7 +62,6 @@ try{
     errorme
 }
 catch(ReferenceError){
-    // alert("Didnt work")
     clusterPoints = forceDirectedLayout()
 }
 
@@ -90,11 +89,7 @@ const addNode = function(cluster){
         size = data.variables.clusterSizes[cluster]/maxCluster * constants.clusterSize;
     }
 
-    // if(cluster == "5"){
-    //     name = "Outliers";
-    //     size = 1;
-    // }
-    if(cluster == "-1"){
+    if(cluster == "-99"){
         name = "Protected";
         size = 1
         color = coloring.protectedCluster
@@ -234,34 +229,11 @@ for (node in data.nodes){
 
         size: data.variables.clusterSizes[current.cluster]/maxCluster * 
                                 constants.clusterSize * constants.nodeSize / 5,
-        color: coloring.active,
+        color: (current.json.id_str === data.origin.json.id_str) ? coloring.origin : coloring.active ,
         hidden: true
     });
     clusterSizes[current.cluster] += -1;
 }
-
-
-// # Add origin Node
-
-origin = data.origin;
-fullSize = data.variables.clusterSizes[origin.cluster];
-sizeLeft = clusterSizes[origin.cluster];
-angle = tau/fullSize * (fullSize - sizeLeft);
-// FIXME: origin node doesn't work
-originSettings = {
-    id: origin.json.id_str,
-    label: origin.json.name,
-	x: clusterPoints[origin.cluster].x,
-
-	y: clusterPoints[origin.cluster].y, 
-
-	size: data.variables.clusterSizes[origin.cluster]/maxCluster * constants.clusterSize * 1.1,
-    color: coloring.origin,
-    hidden: true
-    }
-index = g.nodes.findIndex(node => node.id == origin.json.id_str);
-g.nodes[index] = originSettings;
-
 
 // # Add edges
 

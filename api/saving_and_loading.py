@@ -201,8 +201,8 @@ def _saveJSON(graph: Graph, clusters=None, cluster_edges=None, clusterSizes=None
 
     for id_ in clusters.keys():
         node = graph.nodes[id_]
-        if node.id == graph.origin.id:
-            continue
+        # if node.id == graph.origin.id:
+        #     continue
 
         JSON["nodes"].update(
             {str(node.id):
