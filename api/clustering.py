@@ -1,12 +1,13 @@
+from random import randint
 from warnings import filterwarnings
+from itertools import compress, groupby
 
 import numpy as np
-from itertools import compress, groupby
-from sklearn.cluster import SpectralClustering
 import pandas as pd
+from sklearn.cluster import SpectralClustering
 from hdbscan import HDBSCAN
-filterwarnings("ignore", "Graph is not fully connected, spectral embedding")
 
+filterwarnings("ignore", "Graph is not fully connected, spectral embedding")
 
 def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
     """" Takes in a dictionary of nodes {ID: nodeObject} and a number of partitions.
@@ -33,9 +34,9 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
         nodes.pop(id_)
 
     # clusters = []  # Clusters is a python list to allow variable length integers
-    clusterer = SpectralClustering(n_clusters=8, affinity="precomputed", assign_labels="discretize")
 
     for i in range(numPartitions - 1):
+        clusterer = SpectralClustering(n_clusters=randint(3, 10), affinity="precomputed", assign_labels="discretize")
         if i == 0:
             clusters = list((clusterer.fit_predict(createAdjacency(nodes))))
             continue
@@ -165,11 +166,8 @@ def createAdjacency(nodes: dict, selectors: tuple = None) -> np.ndarray:
     return np.array(A)
 
 
-def spectral(A):
-    labels = spectral_clustering(A, n_clusters=8)
-    return labels
-
 ### Unused functions
+
 
 def createLaplacian(A: np.ndarray) -> np.ndarray:
     """Given adjacency matrix return Laplacian Matrix"""
