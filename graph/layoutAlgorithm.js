@@ -13,10 +13,10 @@ function forceDirectedLayout(){
 	    }
 	}
 
-	let L = 0.5; // Spring rest length
+	let L = 1.0; // Spring rest length
 	let Kr = 100.8; // repulsive force constant
 	let Ks = 0.3; // spring constant
-	let deltaT = 0.5; // time step
+	let deltaT = 0.2; // time step
 
 	let N = ccc.length;
 

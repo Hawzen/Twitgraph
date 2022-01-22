@@ -86,7 +86,7 @@ const addNode = function(cluster){
                 break loop1;
             }
         hidden = false;
-        color = clusterColor(cluster, coloring.clusterActive)
+        color = idColor(cluster, coloring.clusterActive)
         size = data.variables.clusterSizes[cluster]/maxCluster * constants.clusterSize;
     }
 
@@ -155,7 +155,6 @@ else {
 
     // Add edge from each length 1 cluster (e.g. c1, c2, c3) to origin cluster c
     data.variables.clusters.forEach((c) => {
-        console.log(c, c.length)
         if(c.length == 1)
             g.edges.push({
                 id: "e_c_c" + c,
@@ -177,24 +176,26 @@ else {
             const prev = getClusterEdge(cluster);
 
             if (prev != null){
-                g.edges.push({
-                    id: "e_c" + cluster + "_c" + prev,
-                    source: "c" + cluster,
-                    target: "c" + prev,
-                    size: constants.edgeSize * 4,
-                    color: clusterColor(cluster, coloring.clusterActive, a=1/cluster.length),
-                    type: config.edges.clusterEdges
-                })
+                if(!g.edges.some(x => x.id === "e_c" + cluster + "_c" + prev))
+                    g.edges.push({
+                        id: "e_c" + cluster + "_c" + prev,
+                        source: "c" + cluster,
+                        target: "c" + prev,
+                        size: constants.edgeSize * 4,
+                        color: idColor("c" + cluster, coloring.clusterActive, a=1/("c" + cluster).length),
+                        type: config.edges.clusterEdges
+                    })
             }
             else {
-                g.edges.push({
-                    id: "e_c" + cluster + "_c",
-                    source: "c" + cluster,
-                    target: "c",
-                    size: constants.edgeSize * 4,
-                    color: clusterColor(cluster, coloring.clusterActive, a=0.7),
-                    type: config.edges.clusterEdges
-                })
+                if(!g.edges.some(x => x.id === "e_c" + cluster + "_c"))
+                    g.edges.push({
+                        id: "e_c" + cluster + "_c",
+                        source: "c" + cluster,
+                        target: "c",
+                        size: constants.edgeSize * 4,
+                        color: idColor("c" + cluster, coloring.clusterActive, a=1/("c" + cluster).length),
+                        type: config.edges.clusterEdges
+                    })
             }
 
             cluster = cluster.slice(0, cluster.length-1);
@@ -425,12 +426,12 @@ function markNodes(id, onColor, offColor, ctrlKey){
 
 function colorEdges(color){
     /* Returns all edges to their original color, and size*/
-	for(let edge in edges){
-        if (edges[edge].id.includes("c"))
-            edges[edge].color = coloring.clusterEdge;
+	for(let edge of edges){
+        if (edge.id.includes("c"))
+            edge.color = idColor(edge.source, coloring.clusterActive, a=1/edge.source.length);
         else{
-    		edges[edge].color = color;
-    		edges[edge].size = 1;
+    		edge.color = color;
+    		edge.size = 1;
         }
 	}
 	s.refresh();
@@ -676,8 +677,7 @@ s.bind('doubleClickStage', function(e) {
 // ### Extras
 
 // Get color function
-function clusterColor(cluster, c, a=undefined){
-    // Determines color of cluster based on cluster ID 
+function idColor(cluster, c, a=undefined){
     let sum = getNumDigits(cluster);
     if(a === undefined)
         return `rgba(${c[0]}, ${c[1] * sum / 10}, ${c[2] * sum / 3}, ${(c.length > 3) ? c[3] : 1})`
@@ -698,3 +698,6 @@ function getNumDigits(num){
 function checknode(nodeId){ // Checking, not used 
     return nodes.some(x => Array(data.nodes[nodeId].edges).includes(x.id));
 }
+
+// Execute at start
+colorEdges(coloring.edge); // Not sure why, but some colors start wrongly, this sets it up correctly

@@ -86,12 +86,12 @@ def myHDBSCAN(nodes, numPartitions):
 
     hdb = HDBSCAN(
         min_cluster_size=5,
-        cluster_selection_epsilon=1, 
+        cluster_selection_epsilon=2, 
         cluster_selection_method="leaf",
         metric="manhattan",
     )
 
-    for i in range(2 - 1):
+    for i in range(numPartitions - 1):
         if i == 0:
             clusters = hdb.fit_predict(createAdjacency(nodes))
             continue
@@ -110,7 +110,7 @@ def myHDBSCAN(nodes, numPartitions):
         cnt = 0
         for index, el in enumerate(clusters):
             if el == cluster:
-                clusters[index] = int(str(clusters[index]) + str(vec[cnt]))
+                clusters[index] = (clusters[index]) + (vec[cnt])
                 cnt += 1
 
     # clusters = np.unique(n_clusters).tolist()
@@ -121,7 +121,7 @@ def myHDBSCAN(nodes, numPartitions):
     # edges = pd.DataFrame(distances).applymap(lambda x: x > 0.05).values.tolist()
 
     for Id, cluster in zip(nodes, clusters):
-        nodesToClusters.update({Id: int(cluster)})
+        nodesToClusters.update({Id: (cluster)})
 
     return nodesToClusters, None
 
