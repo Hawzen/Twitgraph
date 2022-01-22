@@ -2,7 +2,7 @@ from warnings import filterwarnings
 
 import numpy as np
 from itertools import compress, groupby
-from sklearn.cluster import spectral_clustering
+from sklearn.cluster import SpectralClustering
 import pandas as pd
 from hdbscan import HDBSCAN
 filterwarnings("ignore", "Graph is not fully connected, spectral embedding")
@@ -33,10 +33,11 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
         nodes.pop(id_)
 
     # clusters = []  # Clusters is a python list to allow variable length integers
+    clusterer = SpectralClustering(n_clusters=8, affinity="precomputed", assign_labels="discretize")
 
     for i in range(numPartitions - 1):
         if i == 0:
-            clusters = list((spectral(createAdjacency(nodes))))
+            clusters = list((clusterer.fit_predict(createAdjacency(nodes))))
             continue
 
         # Sort then group clusters by num. of members
@@ -44,7 +45,7 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
         cluster = max(frequency, key=frequency.get)
         
         # Split nodes that belong to 'cluster' into two clusters
-        vec = spectral(createAdjacency(nodes, tuple(cluster == x for x in clusters)))
+        vec = clusterer.fit_predict(createAdjacency(nodes, tuple(cluster == x for x in clusters)))
 
         # Update all new clustered elements from vec to clusters
         cnt = 0
@@ -55,7 +56,23 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
 
     for Id, cluster in zip(nodes, clusters):
         nodesToClusters.update({Id: int(cluster)})
-    return nodesToClusters
+
+    # Get edges based on mean closeness
+    clusters_unique = np.unique(clusters).tolist()
+    adj = createAdjacency(nodes)
+    means = {cluster: np.zeros(adj.shape[1]) for cluster in clusters_unique}
+    counts = {cluster: 0 for cluster in clusters_unique}
+    for row, cluster in zip(adj, clusters):
+        means[cluster] += row
+        counts[cluster] += 1
+    means = {cluster: means[cluster] / counts[cluster] for cluster in means}
+    
+    distances = [
+        [abs(cl1 - cl2).mean() for cl2 in means.values()] for cl1 in means.values()
+    ]
+    edges = pd.DataFrame(distances).applymap(lambda x: x > 0.17).values.tolist()
+
+    return nodesToClusters, edges
 
 
 def myHDBSCAN(nodes, numPartitions):

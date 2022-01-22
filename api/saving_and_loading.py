@@ -109,7 +109,7 @@ def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
             cutNodes.update({node.id: node})
 
         if algorithm == "spectral_clustering":
-            clusters = mySpectralClustering(cutNodes, n_clusters)
+            clusters, cluster_edges = mySpectralClustering(cutNodes, n_clusters)
             clusterSizes = \
                 dict(
                     map(
@@ -117,7 +117,7 @@ def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
                     )
                 )
             modifyConfig(theme, layout)
-            dumpData(_saveJSON(graph, clusters=clusters, clusterSizes=clusterSizes, algorithm="spectral_clustering"))
+            dumpData(_saveJSON(graph, clusters=clusters, clusterSizes=clusterSizes, cluster_edges=cluster_edges, algorithm="spectral_clustering"))
             return
 
         elif algorithm == "HDBSCAN":
