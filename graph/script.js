@@ -90,24 +90,24 @@ const addNode = function(cluster){
         size = data.variables.clusterSizes[cluster]/maxCluster * constants.clusterSize;
     }
 
-    if(cluster == "5"){
-        name = "Outliers";
-        size = 1;
-    }
-    if(cluster == "4"){
+    // if(cluster == "5"){
+    //     name = "Outliers";
+    //     size = 1;
+    // }
+    if(cluster == "-1"){
         name = "Protected";
         size = 1
         color = coloring.protectedCluster
     }
 
     g.nodes.push({
-    id: "c" + cluster,
-    label: name,
-    x: clusterPoints[cluster].x,
-    y: clusterPoints[cluster].y,
-    size: size,
-    color: color, 
-    hidden: hidden
+        id: "c" + cluster,
+        label: name,
+        x: clusterPoints[cluster].x,
+        y: clusterPoints[cluster].y,
+        size: size,
+        color: color, 
+        hidden: hidden
     });    
 }
 
@@ -128,57 +128,71 @@ for(key in data.variables.clusters){
 
 // Add cluster edges
 
-const getClusterEdge = function(cluster) {
-    while(true){
-        cluster = cluster.slice(0, cluster.length-1);;
-        if (cluster == "")   return null
-        if (g.nodes.some(x => x.id == "c" + cluster))
-            return cluster
+// If clusterEdges defined take edges from there, otherwise predict edges from cluster names
+if(data.variables.clusterEdges.length > 0)
+    for(i in data.variables.clusterEdges)
+        for(j in data.variables.clusterEdges[i]){
+            // console.log(i, data.variables.clusterEdges[i][j])
+            if(data.variables.clusterEdges[i][j])
+                g.edges.push({
+                    id: "e_c" + data.variables.clusters[i] + "_c" + data.variables.clusters[j],
+                    source: "c" + data.variables.clusters[i],
+                    target: "c" + data.variables.clusters[j],
+                    size: constants.edgeSize * 4,
+                    color: coloring.clusterEdge,
+                    type: config.edges.clusterEdges
+                })
+            }
+else {
+    const getClusterEdge = function(cluster) {
+        while(true){
+            cluster = cluster.slice(0, cluster.length-1);;
+            if (cluster == "")   return null
+            if (g.nodes.some(x => x.id == "c" + cluster))
+                return cluster
+        }
     }
-}
 
-let check = [];
-
-// Add edge from each length 1 cluster (e.g. c1, c2, c3) to origin cluster c
-data.variables.clusters.forEach((c) => {
-    if(c.length == 1)
-        g.edges.push({
-            id: "e_c_c" + c,
-            source: "c",
-            target: "c" + c,
-            size: constants.edgeSize * 4,
-            color: coloring.clusterEdge,
-            type: config.edges.clusterEdges
-        })
-})    
-
-for(key in data.variables.clusters){
-    cluster = data.variables.clusters[key];
-    
-    whileLoop:
-    while(true){
-        const prev = getClusterEdge(cluster);
-
-        if (prev != null){
+    // Add edge from each length 1 cluster (e.g. c1, c2, c3) to origin cluster c
+    data.variables.clusters.forEach((c) => {
+        if(c.length == 1)
             g.edges.push({
-                id: "e_c" + cluster + "_c" + prev,
-                source: "c" + cluster,
-                target: "c" + prev,
+                id: "e_c_c" + c,
+                source: "c",
+                target: "c" + c,
                 size: constants.edgeSize * 4,
                 color: coloring.clusterEdge,
                 type: config.edges.clusterEdges
             })
-        }
+    })    
 
-        cluster = cluster.slice(0, cluster.length-1);
-        while(check.some(x => x == cluster))
+    for(key in data.variables.clusters){
+        cluster = data.variables.clusters[key];
+        
+        whileLoop:
+        while(true){
+            const prev = getClusterEdge(cluster);
+
+            if (prev != null){
+                g.edges.push({
+                    id: "e_c" + cluster + "_c" + prev,
+                    source: "c" + cluster,
+                    target: "c" + prev,
+                    size: constants.edgeSize * 4,
+                    color: coloring.clusterEdge,
+                    type: config.edges.clusterEdges
+                })
+            }
+
             cluster = cluster.slice(0, cluster.length-1);
-        if(cluster === "")
-            break whileLoop;
-        check.push(cluster)
+            while(check.some(x => x == cluster))
+                cluster = cluster.slice(0, cluster.length-1);
+            if(cluster === "")
+                break whileLoop;
+            check.push(cluster)
+        }
     }
 }
-
 
 // # Add nodes
 // We determine the x, y position of nodes by uniformly spacing them around the cluster point associated 

@@ -2,8 +2,7 @@ function forceDirectedLayout(){
 	// Add all clusters to clusterPoints
 	let clusterPoints = {};
 	let ccc = [{x: 0, y: 0, cluster: ""}]
-	for(key in data.variables.clusters){
-	    cluster = data.variables.clusters[key]
+	for(cluster of data.variables.clusters){
 	    loopWhile:
 	    while(true){
 	    	if(!ccc.some(x => x.cluster == cluster))
@@ -104,7 +103,7 @@ function forceDirectedLayout(){
 		cluster = ccc[i];
 		clusterPoints[cluster.cluster] = {x: cluster.x, y: cluster.y};
 	}
-
+	
 	console.log(JSON.stringify(clusterPoints))
 	return clusterPoints;
 }
