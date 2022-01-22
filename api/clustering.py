@@ -57,20 +57,20 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
     for Id, cluster in zip(nodes, clusters):
         nodesToClusters.update({Id: int(cluster)})
 
-    # Get edges based on mean closeness
-    clusters_unique = np.unique(clusters).tolist()
-    adj = createAdjacency(nodes)
-    means = {cluster: np.zeros(adj.shape[1]) for cluster in clusters_unique}
-    counts = {cluster: 0 for cluster in clusters_unique}
-    for row, cluster in zip(adj, clusters):
-        means[cluster] += row
-        counts[cluster] += 1
-    means = {cluster: means[cluster] / counts[cluster] for cluster in means}
-    
-    distances = [
-        [abs(cl1 - cl2).mean() for cl2 in means.values()] for cl1 in means.values()
-    ]
-    edges = pd.DataFrame(distances).applymap(lambda x: x > 0.17).values.tolist()
+    edges = None
+    # # Get edges based on mean closeness
+    # clusters_unique = np.unique(clusters).tolist()
+    # adj = createAdjacency(nodes)
+    # means = {cluster: np.zeros(adj.shape[1]) for cluster in clusters_unique}
+    # counts = {cluster: 0 for cluster in clusters_unique}
+    # for row, cluster in zip(adj, clusters):
+    #     means[cluster] += row
+    #     counts[cluster] += 1
+    # means = {cluster: means[cluster] / counts[cluster] for cluster in means}
+    # distances = [
+    #     [abs(cl1 - cl2).mean() for cl2 in means.values()] for cl1 in means.values()
+    # ]
+    # edges = pd.DataFrame(distances).applymap(lambda x: x > 0.17).values.tolist()
 
     return nodesToClusters, edges
 

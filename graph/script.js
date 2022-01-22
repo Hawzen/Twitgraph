@@ -155,6 +155,7 @@ else {
 
     // Add edge from each length 1 cluster (e.g. c1, c2, c3) to origin cluster c
     data.variables.clusters.forEach((c) => {
+        console.log(c, c.length)
         if(c.length == 1)
             g.edges.push({
                 id: "e_c_c" + c,
@@ -165,6 +166,8 @@ else {
                 type: config.edges.clusterEdges
             })
     })    
+    // console.log(g.edges)
+    check = []
 
     for(key in data.variables.clusters){
         cluster = data.variables.clusters[key];
@@ -178,6 +181,16 @@ else {
                     id: "e_c" + cluster + "_c" + prev,
                     source: "c" + cluster,
                     target: "c" + prev,
+                    size: constants.edgeSize * 4,
+                    color: coloring.clusterEdge,
+                    type: config.edges.clusterEdges
+                })
+            }
+            else {
+                g.edges.push({
+                    id: "e_c" + cluster + "_c",
+                    source: "c" + cluster,
+                    target: "c",
                     size: constants.edgeSize * 4,
                     color: coloring.clusterEdge,
                     type: config.edges.clusterEdges

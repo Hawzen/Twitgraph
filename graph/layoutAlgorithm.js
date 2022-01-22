@@ -14,13 +14,13 @@ function forceDirectedLayout(){
 	}
 
 	let L = 0.5; // Spring rest length
-	let Kr = 0.2; // repulsive force constant
+	let Kr = 100.8; // repulsive force constant
 	let Ks = 0.3; // spring constant
-	let deltaT = 1; // time step
+	let deltaT = 0.5; // time step
 
 	let N = ccc.length;
 
-	for(let iii=0; iii < 3000; iii++){
+	for(let iii=0; iii < 7000; iii++){
 		// Initialize net forces
 		for (key in ccc){
 		    ccc[key].forceX = 0;
