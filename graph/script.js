@@ -182,7 +182,7 @@ else {
                     source: "c" + cluster,
                     target: "c" + prev,
                     size: constants.edgeSize * 4,
-                    color: coloring.clusterEdge,
+                    color: clusterColor(cluster, coloring.clusterActive, a=1/cluster.length),
                     type: config.edges.clusterEdges
                 })
             }
@@ -192,7 +192,7 @@ else {
                     source: "c" + cluster,
                     target: "c",
                     size: constants.edgeSize * 4,
-                    color: coloring.clusterEdge,
+                    color: clusterColor(cluster, coloring.clusterActive, a=0.7),
                     type: config.edges.clusterEdges
                 })
             }
@@ -676,10 +676,13 @@ s.bind('doubleClickStage', function(e) {
 // ### Extras
 
 // Get color function
-function clusterColor(cluster, c){
+function clusterColor(cluster, c, a=undefined){
     // Determines color of cluster based on cluster ID 
     let sum = getNumDigits(cluster);
-    return `rgba(${c[0]}, ${c[1] * sum / 10}, ${c[2] * sum / 3}, ${(c.length > 3) ? c[3] : 1})`
+    if(a === undefined)
+        return `rgba(${c[0]}, ${c[1] * sum / 10}, ${c[2] * sum / 3}, ${(c.length > 3) ? c[3] : 1})`
+    else
+        return `rgba(${c[0]}, ${c[1] * sum / 10}, ${c[2] * sum / 3}, ${a})`
 }
 
 function getNumDigits(num){
