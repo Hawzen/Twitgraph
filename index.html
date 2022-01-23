@@ -1,34 +1,47 @@
 <html>
-<head>
+  <head>
     <title>Graph</title>
   </head>
   <body>
     <div id="button-container">
-      <button id="visibility" class="buttons" type="button">Toggle Nodes</button>
+      <button id="visibility" class="buttons" type="button">
+        Toggle Nodes
+      </button>
       <button id="graphInfo" class="buttons" type="button">Info</button>
       <button id="about" class="buttons" type="button">About</button>
+      <input id="search-input" type="text" placeholder="Search.." />
     </div>
 
     <style id="buttons">
       #button-container {
         position: absolute;
-        bottom: 0; 
+        bottom: 0;
         right: 0;
 
         margin: 2em;
         max-height: 30%;
-        
 
         grid-gap: 1em;
         display: grid;
-        grid-template-rows: 2em 2em;    
+        grid-template-rows: 2em 2em;
       }
 
       .buttons {
-
         border: none;
         background: rgba(10, 10, 10, 0.5);
 
+        min-height: 3em;
+
+        line-height: 5%;
+        font-weight: bold;
+        font-family: monospace;
+        color: rgba(120, 20, 40);
+
+        z-index: 10;
+      }
+
+      #search-input {
+        border: none;
         min-height: 3em;
 
         line-height: 5%;
@@ -50,7 +63,7 @@
           position: absolute;
         }
       </style>
-    </div>  
+    </div>
     <div id="miniMap">
       <style>
         #miniMap {
@@ -67,40 +80,40 @@
     <div id="info">
       <div class="infoBox"></div>
     </div>
-        <style>
-            .infoBox {
-              position: absolute;
+    <style>
+      .infoBox {
+        position: absolute;
 
-              margin-top: 1em ;
-              margin-left: 3em ;
-              margin-bottom: 1em ;
+        margin-top: 1em;
+        margin-left: 3em;
+        margin-bottom: 1em;
 
-              width: auto;
-              height: auto;
-              max-width: 30%;
-              max-height: 90%;
+        width: auto;
+        height: auto;
+        max-width: 30%;
+        max-height: 90%;
 
-              overflow-y: auto;
+        overflow-y: auto;
 
-              font-family: monospace;
+        font-family: monospace;
 
-              /*
+        /*
               background-color and color are controlled
               by the js in script.js
               */
-            }      
+      }
 
-            .infoBox img { 
-              z-index: 5;
-              position: absolute;
-              max-width: 100%;
-              max-height: 100%;
-            }
-        </style>
+      .infoBox img {
+        z-index: 5;
+        position: absolute;
+        max-width: 100%;
+        max-height: 100%;
+      }
+    </style>
   </body>
-    <script src="graph/config.js"></script>
-    <script type="text/javascript" src="data/data.json"></script>
-    <script type="text/javascript" src="data/laidout_data.json"></script>
-    <script src="graph/layoutAlgorithm.js"></script>
-    <script src="graph/bundle.js"></script>
+  <script src="graph/config.js"></script>
+  <script type="text/javascript" src="data/data.json"></script>
+  <script type="text/javascript" src="data/laidout_data.json"></script>
+  <script src="graph/layoutAlgorithm.js"></script>
+  <script src="graph/bundle.js"></script>
 </html>
