@@ -1,7 +1,9 @@
-from saving_and_loading import saveShelve
-import tweepy
-from graph import Graph
 from time import sleep
+
+import tweepy
+
+from graph import Graph
+from saving_and_loading import saveShelve
 
 
 def followersStrategy(screenName: str, graph: Graph, api: tweepy.API, nIterations: int, 
