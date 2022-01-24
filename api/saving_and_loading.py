@@ -1,13 +1,7 @@
-import shelve
 import json
-from os.path import exists
-from os import makedirs
-import sys
-import pickle
-from typing import overload
+from typing import Tuple, List
 
 import tweepy
-from redis import Redis
 
 from graph import Graph
 from database import *
@@ -20,7 +14,8 @@ def loadGraph(screenName):
         return db[screenName]
     raise KeyError()
 
-def loadAPI():
+def loadAPI() -> tweepy.API:
+    """Returns tweepy API given that a file called twitterkeys.txt with the keys exists"""
     with open('twitterkeys.txt', 'r') as file:
         lines = file.read().split('\n')
     apiKey = lines[0]
@@ -34,14 +29,14 @@ def loadAPI():
     return api
 
 
-def createGraph(screenName, api):
+def createGraph(screenName: str, api: tweepy.API) -> Graph:
     graph = Graph()
     graph.setOrigin(api, screenName)
     graph.listSearch_graph(api, depth=99)
     return graph
 
 
-def loadAll(screenName, newName=False):
+def loadAll(screenName: str, newName: bool=False) -> Tuple[tweepy.API, Graph]:
     """Gets apiKey, apiSecretKey, accessToken, accessTokenSecret and username from file twitterkeys.txt in
     the same directory, preforms api authentication
     then loads graph and JSON objects from shelve If either does not exist then creates them and set graph origin as
@@ -60,22 +55,21 @@ def loadAll(screenName, newName=False):
     return api, graph
 
 
-def getShelveKeys():
+def getShelveKeys() -> List[str]:
     """returns a list of keys (profiles) stored inside shelve"""
     return db.keys()
 
 
-def deleteShelveKey(screenName):
+def deleteShelveKey(screenName: str) -> None:
     if screenName not in getShelveKeys():
         raise KeyError
 
-    # with shelve.open("shelve/graph_shelve", "w") as sh:
-    #     del sh[screenName]
     del db[screenName]
 
 
-def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
-               n_clusters=0, theme="default", layout="forceDirectedLayout", algorithm="spectral_algorithm"):
+def saveShelve(screenName: str, graph: Graph, dump: bool=False, onlyDone: bool=True, 
+            numNodes: int=0, n_clusters: int=0, theme: str="default", layout: str="forceDirectedLayout", 
+            algorithm: str="spectral_algorithm") -> None:
     """Saves graph object to shelve as well as dump the data to data.json if dump=True"""
     db[screenName] = graph
     db.bgsave()
@@ -136,7 +130,7 @@ def saveShelve(screenName, graph: Graph, dump=False, onlyDone=True, numNodes=0,
     raise NotImplementedError(f"Algorithm {algorithm} is not implemeneted yet")
 
 
-def dumpData(JSON):
+def dumpData(JSON: dict) -> None:
     """Dumps given JSON to data.json file"""
     with open("../data/data.json", "w") as data:
         data.write("let data = ")
@@ -144,7 +138,7 @@ def dumpData(JSON):
         data.flush()
 
 
-def modifyConfig(theme, layout):
+def modifyConfig(theme: str, layout: str) -> None:
     """Modifies the config.js file in graph folder using given arguments and configuration.json file in data folder"""
     with open("../data/configurations.json", 'r') as file:
         config = json.loads(file.read())
@@ -170,7 +164,7 @@ def modifyConfig(theme, layout):
         file.flush()
 
 
-def _saveJSON(graph: Graph, clusters=None, cluster_edges=None, clusterSizes=None, algorithm="spectral_clustering"):
+def _saveJSON(graph: Graph, clusters=None, cluster_edges=None, clusterSizes=None, algorithm="spectral_clustering") -> dict:
     """Creates a JSON containing data from clusters and clusterSizes"""
     JSON = {}
 

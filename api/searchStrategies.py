@@ -1,10 +1,14 @@
-from saving_and_loading import *
+from saving_and_loading import saveShelve
+import tweepy
+from graph import Graph
 from time import sleep
 
 
-def automate(screenName, graph, api, enumerations, quiet=False, dump=False):
+def followersStrategy(screenName: str, graph: Graph, api: tweepy.API, nIterations: int, 
+                    quiet: bool=False, dump: bool=False) -> None:
+    """Searches by looking at followers of a target screenName, then followers of that follower and so on"""
     try:
-        for i in range(enumerations):
+        for i in range(nIterations):
             graph.idSearch_graph(api)
             if graph.getNodeNum() - graph.getDoneNum() <= 15:
                 graph.mopSearch(api)

@@ -1,20 +1,27 @@
+from collections import namedtuple
+from typing import Dict, Any, Tuple, MutableSet, Generator
+
+import tweepy
+
+NodeProgress = namedtuple("NodeProgress", ["DoneAddingFriendsIds", "DoneAddingFriendsUSERObject"])
+
 class Node:
 
-    def __init__(self, user):
+    def __init__(self, user: tweepy.User) -> None:
         self.user = user
         self.id = user.id
         self.cursor = (0, -1)
         self.friendsIds = set()
         self.edges = set()  # Edges from self to other nodes in graph
-        self.done = (False, False)  # 1.Done adding friends' ids   2.Done adding friends' USER object to graph dict
+        self.done = NodeProgress(DoneAddingFriendsIds=False, DoneAddingFriendsUSERObject=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.id}\t{self.user.screen_name}\t{self.done}"
 
     def addFriend(self, friends):
         self.friendsIds.update(friends)
 
-    def listSearch(self, api, depth=99999):
+    def listSearch(self, api: tweepy.API, depth: int=99999) -> Dict[str, Any]:
         """
         Returns dictionary of all friends of self {ID : Node} and a saves cursor in self.cursor
         If limit does not run out before searching then assign self.done to (True, True)
@@ -44,7 +51,7 @@ class Node:
         self.friendsIds.update(friendsDict.keys())
         return friendsDict
 
-    def idSearch(self, api):
+    def idSearch(self, api: tweepy.API) -> None:
         """Gets the first 5000 ids of self's friends and adds them to the friendsIds set then sets self.done[0] to
         True """
         try:
@@ -57,20 +64,20 @@ class Node:
 
 
 class Graph:
-    def __init__(self):
+    def __init__(self) -> None:
         self.origin = None
         self.nodes = {}  # {id : Node}
 
-    def setOrigin(self, api, userName):
+    def setOrigin(self, api: tweepy.API, userName: str) -> None:
         self.origin = Node(api.get_user(userName))
         self.nodes.update({self.origin.user.id: self.origin})
 
     ###Getter Methods###
 
-    def checkFollowers(self, Id):
+    def checkFollowers(self, Id: str) -> Tuple[str]:
         return tuple(node.id for node in self.nodes.values() if Id in node.edges)
 
-    def collectUnexplored(self):
+    def collectUnexplored(self) -> MutableSet[str]:
         """Returns the union set of friendsIds that are not in self.nodes"""
         unexploredIds = set()
         for node in self.nodes.values():
@@ -83,30 +90,30 @@ class Graph:
                 # self.unexploredIds = self.unexploredIds.union(temp)
         return unexploredIds
 
-    def collectFriendless(self):
+    def collectFriendless(self) -> MutableSet[str]:
         """Returns set of ids who have an empty node.friendsIds"""
         return set(node.id for node in self.nodes.values() if len(node.friendsIds) == 0)
 
-    def getNodeNum(self):
+    def getNodeNum(self) -> int:
         return len(self.nodes)
 
-    def getDoneNum(self):
+    def getDoneNum(self) -> int:
         return sum(1 for node in self.nodes.values() if any(node.done))
 
     ###Searching Methods###
 
-    def searchCost(self, Id: int):
+    def searchCost(self, Id: int) -> int:
         """Returns number of friends of node of id ID
            Returns -1 if Id not in self.nodes"""
         if Id in self.nodes.keys():
             return len(self.nodes[Id].friendsIds)
         return -1
 
-    def getFriends(self, node: Node):
+    def getFriends(self, node: Node) -> MutableSet[tweepy.User]:
         """Return all friends of node that are in self.nodes in a set"""
         return set(friend[1] for friend in self.nodes.items() if friend[0] in node.friendsIds)
 
-    def getLeafIds(self):
+    def getLeafIds(self) -> Generator:
         """Breadth first search generator for nodes that aren't in self.nodes"""
         visited = {Id: False for Id in self.nodes}
         stack = [self.origin.id]
@@ -126,7 +133,7 @@ class Graph:
                         yielded.add(Id)
                         yield Id
 
-    def getInternalIds(self):
+    def getInternalIds(self) -> Generator:
         """Breadth first search generator for nodes that are in self.nodes and aren't done (not any(node.done))"""
         visited = {Id: False for Id in self.nodes}
         stack = [self.origin.id]
@@ -151,7 +158,7 @@ class Graph:
                             yield current
                         done.add(Id)
 
-    def idSearch_graph(self, api):
+    def idSearch_graph(self, api: tweepy.API) -> None:
         """
         Gets friends ids of nodes if they aren't stored already, and stores them in the node's
         node.friendsIds set. And also changes the node's 'done' tuple
@@ -172,13 +179,11 @@ class Graph:
                 else:
                     node.done = (True, False)
 
-    def mopSearch(self, api):
+    def mopSearch(self, api: tweepy.API) -> None:
         """ Gets friends of users and adds them to self.nodes"""
-        # nodeList = list(self.collectUnexplored())  # Look up these nodes
         nodeList = list(self.getLeafIds())
-        # limit = api.rate_limit_status()["resources"]['users']['/users/lookup']['remaining']
 
-        if len(nodeList) == 0:
+        if not len(nodeList):
             return
 
         users = api.lookup_users(nodeList[0:100])
@@ -186,23 +191,7 @@ class Graph:
             if user.id not in self.nodes:
                 self.nodes.update({user.id: Node(user)})
 
-        # for _ in range(len(nodeList) // 100):
-        #     users = api.lookup_users(nodeList[0:100])
-        #     for user in users:
-        #         if user.id not in self.nodes:
-        #             self.nodes.update({user.id: Node(user)})
-        #     nodeList = nodeList[100:]
-        #
-        #     limit += -1
-        #     if limit == 1:
-        #         break
-        # else:
-        #     users = api.lookup_users(nodeList)
-        #     for user in users:
-        #         if user.id not in self.nodes:
-        #             self.nodes.update({user.id: Node(user)})
-
-    def listSearch_graph(self, api, depth=5):
+    def listSearch_graph(self, api: tweepy.API, depth: int=5) -> None:
         """
         Executes listSearch on all nodes in graph.nodes that have unrecorded friends.
         Searching is ordered by insertion and stops when limit is zero or no further nodes need searching.
@@ -222,11 +211,11 @@ class Graph:
 
     ###Edge Search Methods###
 
-    def edgeSearch(self, node: Node, nodesSet: set):
+    def edgeSearch(self, node: Node, nodesSet: set) -> None:
         """Gets the intersection of given 'node' with self.nodes and stores them in node's edges set"""
         node.edges = nodesSet.intersection(node.friendsIds)
 
-    def fullEdgeSearch(self, numNodes):
+    def fullEdgeSearch(self, numNodes: int) -> None:
         """Executes edgeSearch numNodes number of nodes for nodes in self.nodes"""
         nodesSet = set(self.nodes)
         for i, node in enumerate(self.nodes.values()):
@@ -237,7 +226,7 @@ class Graph:
 
     ###Extra Methods###
 
-    def printFriends(self, node: Node, indent=0, depth=9):
+    def printFriends(self, node: Node, indent: int=0, depth: int=9) -> str:
         if not node.edges:
             self.edgeSearch(node, set(self.nodes))
         crntIndent = " " * indent
@@ -253,7 +242,7 @@ class Graph:
                 break
         return full + partial + f"{crntIndent}And {len(node.friendsIds) - count} others\n\n"
 
-    def display(self, start=None, num=100, indent=2, depth=9):
+    def display(self, start: bool=None, num: int=100, indent: int=2, depth: int=9) -> None:
         if not start:
             start = self.origin
         output = self.printFriends(start, indent, depth)

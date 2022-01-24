@@ -1,8 +1,10 @@
-from saving_and_loading import *
-from argparse import ArgumentParser, RawTextHelpFormatter
+import sys
 from warnings import warn
 from os.path import abspath
-from automate import automate
+from argparse import ArgumentParser, RawTextHelpFormatter
+
+from saving_and_loading import *
+from searchStrategies import followersStrategy
 
 handlestring = "Twitter handle (the part in brackets @[foo])"
 
@@ -71,7 +73,7 @@ elif args.selector == "collect":
          "file named twitterkeys.txt on the same level as this file")
 
     api, graph = loadAll(args.screen_name, newName)
-    automate(args.screen_name, graph, api, args.enum, args.quiet)
+    followersStrategy(args.screen_name, graph, api, args.enum, args.quiet)
     saveShelve(args.screen_name, graph, dump=False, onlyDone=True, algorithm=args.algorithm)
 
 elif args.selector == "getkeys":
