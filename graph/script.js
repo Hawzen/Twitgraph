@@ -648,6 +648,22 @@ s.bind('doubleClickStage', function(e) {
 
 // ### Extras
 
+let inputBox = document.getElementById('search-input');
+inputBox.addEventListener("change", searchChange);
+
+function searchChange(e) {
+    var value = e.target.value;
+
+    s.graph.nodes().forEach(function (n) {
+      if (n.label == value) {
+        console.log(n.label)
+        n.color = "#ffff00"
+        n.colorEdges = "#ffff00"
+        n.size = 1000000000
+      }
+    });
+  }
+
 // Get color function
 function idColor(cluster, c, a=undefined){
     let sum = getNumDigits(cluster);
