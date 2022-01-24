@@ -69,7 +69,7 @@ def deleteShelveKey(screenName: str) -> None:
 
 def saveShelve(screenName: str, graph: Graph, dump: bool=False, onlyDone: bool=True, 
             numNodes: int=0, n_clusters: int=0, theme: str="default", layout: str="forceDirectedLayout", 
-            algorithm: str="spectral_algorithm") -> None:
+            algorithm: str="spectral_clustering") -> None:
     """Saves graph object to shelve as well as dump the data to data.json if dump=True"""
     db[screenName] = graph
     db.bgsave()
@@ -127,7 +127,7 @@ def saveShelve(screenName: str, graph: Graph, dump: bool=False, onlyDone: bool=T
             dumpData(_saveJSON(graph, clusters=clusters, cluster_edges=cluster_edges, clusterSizes=clusterSizes, algorithm="HDBSCAN"))
             return
     
-    raise NotImplementedError(f"Algorithm {algorithm} is not implemeneted yet")
+        raise NotImplementedError(f"Algorithm {algorithm} is not implemeneted yet")
 
 
 def dumpData(JSON: dict) -> None:
@@ -140,7 +140,7 @@ def dumpData(JSON: dict) -> None:
 
 def modifyConfig(theme: str, layout: str) -> None:
     """Modifies the config.js file in graph folder using given arguments and configuration.json file in data folder"""
-    with open("../data/configurations.json", 'r') as file:
+    with open("../graphConfig.json") as file:
         config = json.loads(file.read())
 
     defTheme = config["themes"]["default"]
@@ -160,7 +160,7 @@ def modifyConfig(theme: str, layout: str) -> None:
 
     with open("../graph/config.js", "w") as file:
         file.write("let config =\n")
-        json.dump(newConfig, file, indent=8)
+        json.dump(newConfig, file, indent=4)
         file.flush()
 
 
