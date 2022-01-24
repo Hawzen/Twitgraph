@@ -9,11 +9,12 @@ class Node:
 
     def __init__(self, user: tweepy.User) -> None:
         self.user = user
-        self.id = user.id
+        self.id: int = user.id
         self.cursor = (0, -1)
         self.friendsIds = set()
         self.edges = set()  # Edges from self to other nodes in graph
         self.done = NodeProgress(DoneAddingFriendsIds=False, DoneAddingFriendsUSERObject=False)
+        self.tweets: Dict[str, tweepy.Status] = {} # tweetId: Status
 
     def __repr__(self) -> str:
         return f"{self.id}\t{self.user.screen_name}\t{self.done}"
@@ -21,7 +22,7 @@ class Node:
     def addFriend(self, friends):
         self.friendsIds.update(friends)
 
-    def listSearch(self, api: tweepy.API, depth: int=99999) -> Dict[str, Any]:
+    def listSearch(self, api: tweepy.API, depth: int=99999) -> Dict[int, Any]:
         """
         Returns dictionary of all friends of self {ID : Node} and a saves cursor in self.cursor
         If limit does not run out before searching then assign self.done to (True, True)
@@ -74,10 +75,10 @@ class Graph:
 
     ###Getter Methods###
 
-    def checkFollowers(self, Id: str) -> Tuple[str]:
+    def checkFollowers(self, Id: int) -> Tuple[int]:
         return tuple(node.id for node in self.nodes.values() if Id in node.edges)
 
-    def collectUnexplored(self) -> MutableSet[str]:
+    def collectUnexplored(self) -> MutableSet[int]:
         """Returns the union set of friendsIds that are not in self.nodes"""
         unexploredIds = set()
         for node in self.nodes.values():
@@ -90,7 +91,7 @@ class Graph:
                 # self.unexploredIds = self.unexploredIds.union(temp)
         return unexploredIds
 
-    def collectFriendless(self) -> MutableSet[str]:
+    def collectFriendless(self) -> MutableSet[int]:
         """Returns set of ids who have an empty node.friendsIds"""
         return set(node.id for node in self.nodes.values() if len(node.friendsIds) == 0)
 
@@ -180,7 +181,7 @@ class Graph:
                     node.done = (True, False)
 
     def mopSearch(self, api: tweepy.API) -> None:
-        """ Gets friends of users and adds them to self.nodes"""
+        """Gets friends of users and adds them to self.nodes"""
         nodeList = list(self.getLeafIds())
 
         if not len(nodeList):
@@ -208,6 +209,32 @@ class Graph:
                 self.nodes.update(node.listSearch(api, depth=depth))
         except (IOError, StopIteration, IndexError):
             pass
+
+    # ###Tweet Search Methods###
+
+    # def tweet
+    
+    
+    ###Hashtag Search Methods###
+
+    def hashtagSearch(self, api: tweepy.API, hashtag: str, num_tweets: int=0):
+        """
+        Searches tweets in a hashtag and stores each tweet in its author's Node.tweets
+        if the author exists in graph.nodes, otherwise it creates one and adds the tweet
+        
+        It also adds the id_str to graph.hashtags[hashtag]
+        example input: hashtag="#Cars", num_tweets=180
+
+        Note: num_tweets=0 means max tweets 
+        """
+        assert "#" in hashtag, f"The symbol # must be in the input hashtag"
+        assert " " not in hashtag, f"Hashtag doesn't include spaces"
+
+        tweets_limit = api.rate_limit_status()["resources"]["search"]["/search/tweets"]["remaining"]
+        if not num_tweets:
+            num_tweets = tweets_limit
+
+        # CONTINUE ME
 
     ###Edge Search Methods###
 
