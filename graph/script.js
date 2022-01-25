@@ -2,10 +2,9 @@
 let sigma = require("sigma")
 // ### Initialize data JSON
 data.nodes = Object.fromEntries(Object.entries(data['nodes']));
-data.nodes[data.origin.json.id_str] = data.origin;
 
-let counter, counter2, current, id, node, index, origin, temp, name,
- element, elements, originSettings, angle,
+let counter, counter2, current, id, node, index, temp, name,
+ element, elements, angle,
  clusters, cluster, clusterSizes, fullSize, sizeLeft,
  box, infoBox, keepDetails, nodegraph, lights, scalingMode;
 
@@ -229,7 +228,7 @@ for (node in data.nodes){
 
         size: data.variables.clusterSizes[current.cluster]/maxCluster * 
                                 constants.clusterSize * constants.nodeSize / 5,
-        color: (current.json.id_str === data.origin.json.id_str) ? coloring.origin : coloring.active ,
+        color: coloring.active,
         hidden: true
     });
     clusterSizes[current.cluster] += -1;
@@ -368,8 +367,6 @@ function colorNodes(color, active=false){
 
 		nodes[node].active = active;
 		nodes[node].color = color;
-		if (nodes[node].id == origin.json.id_str) // if origin, then origin color
-			nodes[node].color = coloring.origin;
 	}
 	s.render();
 }
@@ -384,8 +381,6 @@ function markNodes(id, onColor, offColor, ctrlKey){
 
 		if (nodes[node].active && ctrlKey || id == nodes[node].id){
 			nodes[node].color = onColor;
-			if (nodes[node].id == origin.json.id_str) // if origin, then origin color
-				nodes[node].color = coloring.origin;
 		}
 		else{
 			nodes[node].active = false;
