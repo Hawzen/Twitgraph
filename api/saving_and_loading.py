@@ -1,3 +1,4 @@
+import sys
 import json
 from typing import Tuple, List
 
@@ -9,38 +10,36 @@ from clustering import myHDBSCAN, mySpectralClustering
 
 db = RedisShelve("twitgraph", db=1)
 
-def loadGraph(screenName):
-    if screenName in db:
-        return db[screenName]
-    raise KeyError()
+def loadGraph(key):
+    if key in db:
+        return db[key]
+    raise KeyError(f"Key {key} is not in the database")
 
 def loadAPI() -> tweepy.API:
     """Returns tweepy API given that a file called twitterkeys.txt with the keys exists"""
-    with open('twitterkeys.txt', 'r') as file:
-        lines = file.read().split('\n')
-    apiKey = lines[0]
-    apiSecretKey = lines[1]
-    accessToken = lines[2]
-    accessTokenSecret = lines[3]
-    auth = tweepy.OAuthHandler(apiKey, apiSecretKey)
-    auth.set_access_token(accessToken, accessTokenSecret)
-    api = tweepy.API(auth)
+    try:
+        with open('twitterkeys.txt', 'r') as file:
+            apiKey, apiSecretKey, accessToken, accessTokenSecret = file.read().strip().split('\n')
+        auth = tweepy.OAuthHandler(apiKey, apiSecretKey)
+        auth.set_access_token(accessToken, accessTokenSecret)
+        api = tweepy.API(auth)
+        return api
+    except Exception as e:
+        print(e)
+        print("\nMake sure to have your:\n\tapiKey,\n\tapiSecretKey,\n\taccessToken,\n\taccessTokenSecret\nin a file named twitterkeys.txt on the same level as this file")
+        sys.exit()
 
-    return api
 
-
-def createGraph(screenName: str, api: tweepy.API) -> Graph:
+def createGraph(key: str, api: tweepy.API) -> Graph:
     graph = Graph()
-    graph.setOrigin(api, screenName)
     graph.listSearch_graph(api, depth=99)
     return graph
 
 
-def loadAll(screenName: str, newName: bool=False) -> Tuple[tweepy.API, Graph]:
+def loadAll(key: str, newName: bool=False) -> Tuple[tweepy.API, Graph]:
     """Gets apiKey, apiSecretKey, accessToken, accessTokenSecret and username from file twitterkeys.txt in
     the same directory, preforms api authentication
-    then loads graph and JSON objects from shelve If either does not exist then creates them and set graph origin as
-    username
+    then loads graph and JSON objects from shelve If either does not exist then creates them 
 
     return api, graph, JSON
     """
@@ -48,9 +47,9 @@ def loadAll(screenName: str, newName: bool=False) -> Tuple[tweepy.API, Graph]:
 
     # Keep track of object target
     if not newName:
-        graph = loadGraph(screenName)
+        graph = loadGraph(key)
     else:
-        graph = createGraph(screenName, api)
+        graph = createGraph(key, api)
 
     return api, graph
 
@@ -60,18 +59,18 @@ def getShelveKeys() -> List[str]:
     return db.keys()
 
 
-def deleteShelveKey(screenName: str) -> None:
-    if screenName not in getShelveKeys():
-        raise KeyError
+def deleteShelveKey(key: str) -> None:
+    if key not in getShelveKeys():
+        raise KeyError(f"Key {key} is not in the database")
 
-    del db[screenName]
+    del db[key]
 
 
-def saveShelve(screenName: str, graph: Graph, dump: bool=False, onlyDone: bool=True, 
+def saveShelve(key: str, graph: Graph, dump: bool=False, onlyDone: bool=True, 
             numNodes: int=0, n_clusters: int=0, theme: str="default", layout: str="forceDirectedLayout", 
             algorithm: str="spectral_clustering") -> None:
     """Saves graph object to shelve as well as dump the data to data.json if dump=True"""
-    db[screenName] = graph
+    db[key] = graph
     db.bgsave()
 
     if dump:
@@ -80,9 +79,9 @@ def saveShelve(screenName: str, graph: Graph, dump: bool=False, onlyDone: bool=T
 
         # Default node, partition values
         if numNodes == 0:
-            numNodes = sum(1 for Id in graph.nodes.keys() if any(graph.nodes[Id].done))
+            numNodes = len(graph.nodes)
         if n_clusters == 0:
-            n_clusters = min(numNodes // 10, 20)
+            n_clusters = min(max(numNodes // 10, 5), 20)
 
         # Check numNodes
         if onlyDone:
@@ -172,7 +171,7 @@ def _saveJSON(graph: Graph, clusters=None, cluster_edges=None, clusterSizes=None
     clustersTuple = sorted(set(clusters.values()))
     clustersTuple = tuple(map(lambda x: str(x), clustersTuple))
 
-    # initialize JSON with nodeNum, doneNum and origin values
+    # initialize JSON with nodeNum, doneNum 
     JSON.update({
         "variables": {
             "nodeNum": len(clusters.keys()),
@@ -183,21 +182,13 @@ def _saveJSON(graph: Graph, clusters=None, cluster_edges=None, clusterSizes=None
             "algorithm": algorithm
         },
         "nodes": {},
-        "origin": {
-                   "edges": tuple(str(edge) for edge in graph.nodes[graph.origin.id].edges),
-                   "json": graph.nodes[graph.origin.id].user._json,
-                   "done": str(graph.nodes[graph.origin.id].done),
-                   "cluster": str(clusters[graph.origin.id])
-                   }
     })
 
     # Add nodes in graph into JSON
 
     for id_ in clusters.keys():
         node = graph.nodes[id_]
-        # if node.id == graph.origin.id:
-        #     continue
-
+        
         JSON["nodes"].update(
             {str(node.id):
                  {"edges": tuple(str(edge) for edge in node.edges),

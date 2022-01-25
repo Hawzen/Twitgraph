@@ -1,4 +1,6 @@
 from time import sleep
+from itertools import zip_longest
+from typing import Generator, Dict, List
 
 import tweepy
 from tqdm import tqdm
@@ -7,22 +9,39 @@ from graph import Graph
 from saving_and_loading import saveShelve
 
 
-def followersStrategy(screenName: str, graph: Graph, api: tweepy.API, nIterations: int, quiet: bool=False) -> None:
-    """Searches by looking at followers of a target screenName, then followers of that follower and so on"""
-    try:
-        for i in tqdm(range(nIterations)):
+def followersStrategy(key: str, graph: Graph, api: tweepy.API, nIterations: int,
+                    maxNumCallsMop=10, startingScreenNames: List[str]=[]) -> Generator:
+    """Searches by looking at followers of a target key, then followers of that follower and so on"""
+    graph.screenNamesSearch(api, startingScreenNames, addToScreenNames=True)
+    for i in range(nIterations):
+        try:
             graph.idSearch_graph(api)
-            if graph.getNodeNum() - graph.getDoneNum() <= 15:
-                graph.mopSearch(api)
+            for j in range(maxNumCallsMop):
+                    graph.mopSearch(api)
+        except tweepy.TweepError as e:
+            print(f"{e}\nError in FollowersStrategy iteration {i} mopCall {j}")
 
-            saveShelve(screenName, graph, onlyDone=True)
-            if not quiet: print(f"\nFinished {i + 1} iteration.\n\tTotal number of nodes: {graph.getNodeNum()}\
-                                        \n\tTotal number of done nodes: {graph.getDoneNum()}\n")
+        saveShelve(key, graph, onlyDone=True)
+        yield None
 
-            for minute in range(15):
-                # if not quiet: print("\r░ MINUTES UNTIL NEXT BATCH\t{:>02}".format(15 - minute), end=" ")
-                sleep(60)
-            sleep(5)
-            # if not quiet: print("\r░ MINUTES UNTIL NEXT BATCH\t{:>02}".format(0), end=" ")
-    finally:
-        saveShelve(screenName, graph, onlyDone=True)
+def queryStrategy(key: str, graph: Graph, api: tweepy.API, queries=[], numTweetsPerQurey=[]) -> Generator:
+    """Searches by investigating a search qurey"""
+    for qurey, numTweets in zip(queries, numTweetsPerQurey):
+        try:
+            graph.qureySearch(api, qurey, numTweets)
+        except tweepy.TweepError as e:
+            print(f"{e}\nError in QureyStrategy qurey {qurey} numTweets {numTweets}")
+        except IndexError: # Happens when rate limited
+            yield None
+            graph.qureySearch(api, qurey, numTweets)
+
+        saveShelve(key, graph, onlyDone=True)
+
+def wait15mins(nIterations):
+    for _ in range(nIterations):
+        sleep(60 * 15 + 10) # Sleep for fifteen minutes and a bit
+        yield
+
+def mixStrategies(nIterations: int, strategiesIterators=[]):
+    for i, _ in enumerate(tqdm(zip_longest(*strategiesIterators), total=nIterations)):
+        pass
