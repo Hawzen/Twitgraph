@@ -217,7 +217,7 @@ class Graph:
 
     ###QureySearch Search Methods###
 
-    def QureySearch(self, api: tweepy.API, qurey: str, num_tweets: int=0, enforceHashtag: bool=False):
+    def qureySearch(self, api: tweepy.API, qurey: str, num_tweets: int=0, enforceHashtag: bool=False):
         """
         Searches tweets in a qurey and stores each tweet in its author's Node.tweets
         if the author exists in graph.nodes, otherwise it creates one and adds the tweet
