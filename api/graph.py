@@ -4,12 +4,13 @@ from typing import Dict, Any, Tuple, MutableSet, Generator
 import tweepy
 
 NodeProgress = namedtuple("NodeProgress", ["DoneAddingFriendsIds", "DoneAddingFriendsUSERObject"])
+NodeID = int
 
 class Node:
 
     def __init__(self, user: tweepy.User) -> None:
         self.user = user
-        self.id: int = user.id
+        self.id: NodeID = user.id
         self.cursor = (0, -1)
         self.friendsIds = set()
         self.edges = set()  # Edges from self to other nodes in graph
@@ -22,7 +23,7 @@ class Node:
     def addFriend(self, friends):
         self.friendsIds.update(friends)
 
-    def listSearch(self, api: tweepy.API, depth: int=99999) -> Dict[int, Any]:
+    def listSearch(self, api: tweepy.API, depth: int=99999) -> Dict[NodeID, Any]:
         """
         Returns dictionary of all friends of self {ID : Node} and a saves cursor in self.cursor
         If limit does not run out before searching then assign self.done to (True, True)
@@ -32,7 +33,7 @@ class Node:
 
         Note: each call to api.friends results in a maximum of 20 users returned
         """
-        friendsDict = {}  # A dict of {IDs: Node} objects related which stores friends of user
+        friendsDict: Dict[NodeID, Node] = {}
         limit = api.rate_limit_status()["resources"]["friends"]['/friends/list']["remaining"]
         if limit == 0:
             raise IOError("listSearch LIMIT REACHED")
@@ -75,10 +76,10 @@ class Graph:
 
     ###Getter Methods###
 
-    def checkFollowers(self, Id: int) -> Tuple[int]:
+    def checkFollowers(self, Id: NodeID) -> Tuple[NodeID]:
         return tuple(node.id for node in self.nodes.values() if Id in node.edges)
 
-    def collectUnexplored(self) -> MutableSet[int]:
+    def collectUnexplored(self) -> MutableSet[NodeID]:
         """Returns the union set of friendsIds that are not in self.nodes"""
         unexploredIds = set()
         for node in self.nodes.values():
@@ -91,7 +92,7 @@ class Graph:
                 # self.unexploredIds = self.unexploredIds.union(temp)
         return unexploredIds
 
-    def collectFriendless(self) -> MutableSet[int]:
+    def collectFriendless(self) -> MutableSet[NodeID]:
         """Returns set of ids who have an empty node.friendsIds"""
         return set(node.id for node in self.nodes.values() if len(node.friendsIds) == 0)
 
@@ -103,7 +104,7 @@ class Graph:
 
     ###Searching Methods###
 
-    def searchCost(self, Id: int) -> int:
+    def searchCost(self, Id: NodeID) -> int:
         """Returns number of friends of node of id ID
            Returns -1 if Id not in self.nodes"""
         if Id in self.nodes.keys():
@@ -114,10 +115,12 @@ class Graph:
         """Return all friends of node that are in self.nodes in a set"""
         return set(friend[1] for friend in self.nodes.items() if friend[0] in node.friendsIds)
 
-    def getLeafIds(self) -> Generator:
+    def getLeafIds(self, start: int=-1) -> Generator:
         """Breadth first search generator for nodes that aren't in self.nodes"""
+        start = self.origin.id if start == -1 else start
+
         visited = {Id: False for Id in self.nodes}
-        stack = [self.origin.id]
+        stack = [start]
 
         yielded = set() # Houses yielded leaf nodes
 
@@ -233,8 +236,13 @@ class Graph:
         tweets_limit = api.rate_limit_status()["resources"]["search"]["/search/tweets"]["remaining"]
         if not num_tweets:
             num_tweets = tweets_limit
+        else:
+            num_tweets = min(num_tweets, tweets_limit)
 
-        # CONTINUE ME
+        for tweet in tweepy.Cursor(api.search, q='#hash', rpp=min(100, num_tweets)).items(num_tweets):
+            if tweet.id in self.nodes:
+                pass
+        
 
     ###Edge Search Methods###
 
