@@ -1,33 +1,12 @@
 // Import Packages
 let sigma = require("sigma");
 // ### Initialize data JSON
-data.nodes = Object.fromEntries(Object.entries(data["nodes"]));
-data.nodes[data.origin.json.id_str] = data.origin;
+data.nodes = Object.fromEntries(Object.entries(data['nodes']));
 
-let counter,
-  counter2,
-  current,
-  id,
-  node,
-  index,
-  origin,
-  temp,
-  name,
-  element,
-  elements,
-  originSettings,
-  angle,
-  clusters,
-  cluster,
-  clusterSizes,
-  fullSize,
-  sizeLeft,
-  box,
-  infoBox,
-  keepDetails,
-  nodegraph,
-  lights,
-  scalingMode;
+let counter, counter2, current, id, node, index, temp, name,
+ element, elements, angle,
+ clusters, cluster, clusterSizes, fullSize, sizeLeft,
+ box, infoBox, keepDetails, nodegraph, lights, scalingMode;
 
 // ### Initialize variables
 
@@ -242,41 +221,29 @@ else {
 
 // Copy cluster sizes and use as a reference to place evenly spaces nodes in a circle around every cluster where
 // data.variables.clusterSizes is unchanged and stores sizes, and clusterSizes is changed and stores nodes left in cluster
-clusterSizes = Object.assign({}, data.variables.clusterSizes);
-for (node in data.nodes) {
-  current = data.nodes[node];
+clusterSizes = Object.assign({}, data.variables.clusterSizes)
+for (node in data.nodes){
+    current = data.nodes[node];
 
-  fullSize = data.variables.clusterSizes[current.cluster];
-  sizeLeft = clusterSizes[current.cluster];
-  angle = (tau / fullSize) * (fullSize - sizeLeft);
+    fullSize = data.variables.clusterSizes[current.cluster];
+    sizeLeft = clusterSizes[current.cluster];
+    angle = tau/fullSize * (fullSize - sizeLeft);
 
-  g.nodes.push({
-    id: current.json.id_str,
-    label: current.json.name,
-    x:
-      clusterPoints[current.cluster].x +
-      Math.cos(angle) *
-        ((data.variables.clusterSizes[current.cluster] / maxCluster) *
-          constants.nodeStretch),
+    g.nodes.push({
+        id: current.json.id_str,
+        label: current.json.name,
+        x: clusterPoints[current.cluster].x + Math.cos(angle) *
+        	(data.variables.clusterSizes[current.cluster] / maxCluster * constants.nodeStretch),
 
-    y:
-      clusterPoints[current.cluster].y +
-      Math.sin(angle) *
-        ((data.variables.clusterSizes[current.cluster] / maxCluster) *
-          constants.nodeStretch),
+        y: clusterPoints[current.cluster].y + Math.sin(angle) *
+        	(data.variables.clusterSizes[current.cluster] / maxCluster * constants.nodeStretch),
 
-    size:
-      ((data.variables.clusterSizes[current.cluster] / maxCluster) *
-        constants.clusterSize *
-        constants.nodeSize) /
-      5,
-    color:
-      current.json.id_str === data.origin.json.id_str
-        ? coloring.origin
-        : coloring.active,
-    hidden: true,
-  });
-  clusterSizes[current.cluster] += -1;
+        size: data.variables.clusterSizes[current.cluster]/maxCluster * 
+                                constants.clusterSize * constants.nodeSize / 5,
+        color: coloring.active,
+        hidden: true
+    });
+    clusterSizes[current.cluster] += -1;
 }
 
 // # Add edges
@@ -409,38 +376,36 @@ function clearDetails() {
   stack = [];
 }
 
-function colorNodes(color, active = false) {
-  /* Returns all nodes to their original color */
-  for (node in nodes) {
-    if (nodes[node].id.includes("c")) continue;
+function colorNodes(color, active=false){
+    /* Returns all nodes to their original color */
+	for(node in nodes){
+        if (nodes[node].id.includes("c"))  
+            continue;
 
-    nodes[node].active = active;
-    nodes[node].color = color;
-    if (nodes[node].id == origin.json.id_str)
-      // if origin, then origin color
-      nodes[node].color = coloring.origin;
-  }
-  s.render();
+		nodes[node].active = active;
+		nodes[node].color = color;
+	}
+	s.render();
 }
 
 function markNodes(id, onColor, offColor, ctrlKey) {
   /* Colors all nodes depending on many factors 
     TODO: Change this to be more efficient*/
-  for (node in nodes) {
-    if (nodes[node].id.includes("c")) continue;
+	for(node in nodes){
 
-    if ((nodes[node].active && ctrlKey) || id == nodes[node].id) {
-      nodes[node].color = onColor;
-      if (nodes[node].id == origin.json.id_str)
-        // if origin, then origin color
-        nodes[node].color = coloring.origin;
-    } else {
-      nodes[node].active = false;
-      nodes[node].color = offColor;
-      // TODO: size
-    }
-  }
-  s.render();
+        if (nodes[node].id.includes("c"))  
+            continue;
+
+		if (nodes[node].active && ctrlKey || id == nodes[node].id){
+			nodes[node].color = onColor;
+		}
+		else{
+			nodes[node].active = false;
+			nodes[node].color = offColor;
+			// TODO: size
+		}
+	}
+	s.render();
 }
 
 function colorEdges(color) {

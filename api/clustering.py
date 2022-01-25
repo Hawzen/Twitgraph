@@ -24,6 +24,7 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
                      1 -> belongs to the first cluster
                      211 -> belongs to the second cluster, the first sub cluster and the first sub-sub cluster
     """
+    minClusterSize = 3
 
     nodesToClusters = {}
     for node in nodes.values():
@@ -44,6 +45,8 @@ def mySpectralClustering(nodes: dict, numPartitions: int = 2) -> dict:
         # Sort then group clusters by num. of members
         frequency = {key: len(tuple(group)) for key, group in groupby(sorted(clusters))}
         cluster = max(frequency, key=frequency.get)
+        if frequency[cluster] < minClusterSize:
+            break
         
         # Split nodes that belong to 'cluster' into two clusters
         vec = clusterer.fit_predict(createAdjacency(nodes, tuple(cluster == x for x in clusters)))
