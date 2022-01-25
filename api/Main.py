@@ -73,8 +73,7 @@ elif args.selector == "collect":
          "file named twitterkeys.txt on the same level as this file")
 
     api, graph = loadAll(args.screen_name, newName)
-    followersStrategy(screenName=args.screen_name, graph=graph, api=api, 
-                    nIterations=args.enum, quiet=args.quiet)
+    followersStrategy(screenName=args.screen_name, graph=graph, api=api, nIterations=args.enum, quiet=args.quiet)
 
 elif args.selector == "getkeys":
     for screenName in getShelveKeys():

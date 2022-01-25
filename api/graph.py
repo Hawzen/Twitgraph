@@ -1,10 +1,11 @@
 from collections import namedtuple
-from typing import Dict, Any, Tuple, MutableSet, Generator
+from typing import Dict, Any, Tuple, MutableSet, Generator, List
 
 import tweepy
 
 NodeProgress = namedtuple("NodeProgress", ["DoneAddingFriendsIds", "DoneAddingFriendsUSERObject"])
 NodeID = int
+TweetID = str
 
 class Node:
 
@@ -15,7 +16,7 @@ class Node:
         self.friendsIds = set()
         self.edges = set()  # Edges from self to other nodes in graph
         self.done = NodeProgress(DoneAddingFriendsIds=False, DoneAddingFriendsUSERObject=False)
-        self.tweets: Dict[str, tweepy.Status] = {} # tweetId: Status
+        self.tweets: Dict[TweetID, tweepy.Status] = {}
 
     def __repr__(self) -> str:
         return f"{self.id}\t{self.user.screen_name}\t{self.done}"
@@ -69,6 +70,7 @@ class Graph:
     def __init__(self) -> None:
         self.origin = None
         self.nodes = {}  # {id : Node}
+        self.queries: Dict[str, Dict[str, tweepy.Status]] = {}
 
     def setOrigin(self, api: tweepy.API, userName: str) -> None:
         self.origin = Node(api.get_user(userName))
@@ -213,25 +215,21 @@ class Graph:
         except (IOError, StopIteration, IndexError):
             pass
 
-    # ###Tweet Search Methods###
+    ###QureySearch Search Methods###
 
-    # def tweet
-    
-    
-    ###Hashtag Search Methods###
-
-    def hashtagSearch(self, api: tweepy.API, hashtag: str, num_tweets: int=0):
+    def QureySearch(self, api: tweepy.API, qurey: str, num_tweets: int=0, enforceHashtag: bool=False):
         """
-        Searches tweets in a hashtag and stores each tweet in its author's Node.tweets
+        Searches tweets in a qurey and stores each tweet in its author's Node.tweets
         if the author exists in graph.nodes, otherwise it creates one and adds the tweet
         
-        It also adds the id_str to graph.hashtags[hashtag]
-        example input: hashtag="#Cars", num_tweets=180
+        It also adds the id_str to graph.queries[qurey]
+        example input: qurey="#Cars", num_tweets=180
 
         Note: num_tweets=0 means max tweets 
         """
-        assert "#" in hashtag, f"The symbol # must be in the input hashtag"
-        assert " " not in hashtag, f"Hashtag doesn't include spaces"
+        if enforceHashtag:
+            assert "#" == qurey[0], f"The symbol # is not the first character of the input qurey '{qurey}'"
+            assert " " not in qurey, f"qurey '{qurey}' shouldn't include spaces"
 
         tweets_limit = api.rate_limit_status()["resources"]["search"]["/search/tweets"]["remaining"]
         if not num_tweets:
@@ -239,10 +237,13 @@ class Graph:
         else:
             num_tweets = min(num_tweets, tweets_limit)
 
-        for tweet in tweepy.Cursor(api.search, q='#hash', rpp=min(100, num_tweets)).items(num_tweets):
-            if tweet.id in self.nodes:
-                pass
-        
+        for tweet in tweepy.Cursor(api.search, q=qurey, rpp=min(100, num_tweets)).items(num_tweets):
+            self.queries[qurey][tweet.id_str] = tweet
+            if node := self.nodes.get(tweet.user.id, None):
+                node.tweets[tweet.id_str] = tweet
+            else:
+                self.nodes[tweet.user.id] = tweet.user
+                self.nodes[tweet.user.id].tweets[tweet.id_str] = tweet
 
     ###Edge Search Methods###
 
