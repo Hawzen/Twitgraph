@@ -1,17 +1,8 @@
 # Twitgraph
-Twitgraph is a library that generates an interactive network of social clusters related to any twitter profile.   
+Twitgraph is a library that generates an interactive network of social clusters related to any twitter profile or a twitter qurey.   
 
-### How it works
-It does this following these steps:
-  1. Choosing an origin of the network, i.e. the profile we want to examine.
-  2. Getting data about the following of that profile.
-  3. Repeating step 2 for each profile we get until we reach a satisfactory number of nodes.
-  4. Cluster the profiles in a way that groups similar profiles to each other.
-  5. Visualize the clusters using a node-edge graph, where clusters have edges to other clusters and profiles have edges to other profiles
+![mg](https://i.imgur.com/VGXPtQd_d.webp?maxwidth=760&fidelity=grand)
 
-The api is called using [Tweepy](https://www.tweepy.org/) and the nodes are clustered using [Spectral Clustering](https://en.wikipedia.org/wiki/Spectral_clustering), visualized using [Sigmajs](http://sigmajs.org/) on the web
-
-The thing to note is that the graph shows connections between **clusters**, so as an example one profile graph of a resturant might be seperated to two clusters, a cluster with containing other companies the resturant follows, and a cluster containing important people like the manager and such. The first cluster might be further clustered into two clusters, say resturants that follow the same resturant chain and another composed of different resturants.
 
 ### Usage
 
