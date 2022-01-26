@@ -101,9 +101,9 @@ elif args.selector == "keys":
     if args.deleteSome:
             if input(f"Do you want to delete {args.key}? (y/n) ") == "y":
                 deleteShelveKey(args.key)
-    print("\nCurrent screen names are:")
+    print("\nCurrent screen names are:\n")
     for key in getShelveKeys():
-        print(f"\t{key}")
+        print(f"\t{key}\n")
 
 elif args.selector == "stats":
     if args.key is None:
