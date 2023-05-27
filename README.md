@@ -1,7 +1,9 @@
+> :warning: With the 2023 Twitter API changes this project might not work as expected, and should be updated to integrate with Twitter in another way
+
 # Twitgraph
 Twitgraph is a library that generates an interactive network of social clusters related to any twitter profile or a twitter qurey.   
 
-![mg](https://i.imgur.com/VGXPtQd_d.webp?maxwidth=760&fidelity=grand)
+![image](https://github.com/Hawzen/Twitgraph/assets/43524721/2239189a-2b1b-48c5-9b0a-caa79085900e)
 
 
 ### Usage
