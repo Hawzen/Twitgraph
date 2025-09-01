@@ -94,8 +94,7 @@ Twitgraph is a library that generates an interactive network of social clusters 
                             
                             
 ### Adding your own theme
-You can specify colors and constants of the graph visualization by editing the data/configurations.json, duplicate and existing theme and edit the values that you wish to edit, you can leave and out any object you do not wish to edit and it'll replaced by it's default config, as an example you duplicate the 'colors' object and leave out the 'constants' and 'layout' objects.
+You can specify colors and constants of the graph visualization by editing `data/configurations.json`. Duplicate an existing theme and edit the values you wish to change. You can leave out any object you don't want to edit, and it’ll be replaced by its default config. For example, you can duplicate the ‘colors’ object and leave out the ‘constants’ and ‘layout’ objects.
 
 ### Adding your own layout algorithm
-You can write an algorithm to compute the (x, y) coordinates of each cluster by writing a javascript function in graph/layoutAlgorithm.js that returns an object which relate each cluster ID -> (x, y) coordinate (Note: you will need to fimilirize yourself with the code structure in script.js first). After that you should choose the add name of the function you created to 'layouts' in the file data/configurations.json. Running Main.py visualize, choose '--layout' as the name of your function.
-
+You can write an algorithm to compute the (x, y) coordinates of each cluster by writing a JavaScript function in `graph/layoutAlgorithm.js` that returns an object which relates each cluster ID -> (x, y) coordinate. (Note: you will need to familiarize yourself with the code structure in script.js first.) After that, you should add the name of the function you created to ‘layouts’ in the file `data/configurations.json`. When running main.py visualize, choose `--layout` as the name of your function.
